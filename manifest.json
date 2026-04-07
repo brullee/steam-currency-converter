@@ -1,0 +1,28 @@
+{
+  "manifest_version": 3,
+  "name": "Steam Currency Converter",
+  "version": "1.0",
+  "description": "Converts Steam prices",
+
+  "permissions": ["storage"],
+  
+  "host_permissions": [
+    "*://store.steampowered.com/*",
+    "*://steamcommunity.com/*",
+    "*://checkout.steampowered.com/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": [
+        "*://store.steampowered.com/*",
+        "*://steamcommunity.com/*",
+        "*://checkout.steampowered.com/*"
+      ],
+      "js": ["content.js"],
+      "css":["style.css"],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ]
+}

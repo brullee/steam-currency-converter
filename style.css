@@ -1,0 +1,25 @@
+.ext-wallet-row {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important; 
+    margin-top: 10px !important;
+    padding-left: 45px !important;
+    padding-right: 10px !important; 
+}
+
+#ext-wallet-display {
+    color: #85bb65;
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.usd-input-preview {
+    color: #85bb65 !important;
+    font-weight: bold !important;
+    font-size: 12px !important;
+}
+
+/* Keep Steam's internal groups from wrapping */
+.market_sell_dialog_input_group {
+    white-space: nowrap !important;
+}
