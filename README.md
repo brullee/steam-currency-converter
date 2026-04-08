@@ -54,7 +54,7 @@ Help users understand prices on Steam without relying on external conversion too
 
 ## How to test
 
-#### Firefox Baed Browsers:
+#### Firefox Based Browsers:
 
 1. Clone/ Download Repo.
 2. Type `about:debugging` in the search bar.
@@ -62,7 +62,7 @@ Help users understand prices on Steam without relying on external conversion too
 4. Press `Load Temporary Add-on`.
 5. Locate Extension Folder & Select `manifest.json`.
 
-#### Chromium Baed Browsers:
+#### Chromium Based Browsers:
 
 1. Clone/ Download Repo.
 2. Type `chrome://extensions` in the search bar.
