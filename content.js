@@ -1,54 +1,61 @@
-// 1. SETTINGS
 const CONFIG = {
     from: { symbol: '\u20B4', code: 'UAH' },
     to:   { symbol: '$',     code: 'USD', locale: 'en-US' },
     rate:  0.022891511,
 };
 
-const CONVERTED_ATTR = "data-steam-converted";
-const PRICE_REGEX       = new RegExp(`([-\u2212+]?)([\\d\\s.,\u00A0]+)${CONFIG.from.symbol}`, 'g');
-const PRICE_MATCH_REGEX = new RegExp(`^(\\s*)([-\u2212+]?)([\\d\\s.,\u00A0]+)${CONFIG.from.symbol}$`);
+const CONVERTED_ATTR = "data-cc-converted";
 
-// 2. THE CONVERTER ENGINE
+const PRICE_CORE        = `([-\u2212+]?)([\\d\\s.,\u00A0]+)${CONFIG.from.symbol}`;
+const PRICE_REGEX       = new RegExp(PRICE_CORE, 'g');
+const PRICE_MATCH_REGEX = new RegExp(`^(\\s*)${PRICE_CORE}$`);
+
+const SPECIALTY_IDS = ['marketWalletBalanceAmount', 'header_wallet_balance', 'usd_receive_preview', 'usd_buyer_preview', 'ext-wallet-display'];
+
+function formatUSD(value) {
+    return value.toLocaleString(CONFIG.to.locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 function convertPrice(text) {
     const match = text.match(PRICE_MATCH_REGEX);
     if (!match) return text;
-
-    const whitespace = match[1];
-    const sign = match[2];
-    const numberPart = match[3];
-
-    const rawNumber = numberPart.replace(/[\s\u00A0]/g, '').replace(',', '.');
+    const rawNumber = match[3].replace(/[\s\u00A0]/g, '').replace(',', '.');
     const numericValue = parseFloat(rawNumber);
-
     if (isNaN(numericValue)) return text;
+    return `${match[1]}${match[2]}${CONFIG.to.symbol}${formatUSD(numericValue * CONFIG.rate)}`;
+}
 
-    const converted = numericValue * CONFIG.rate;
-    const formatted = converted.toLocaleString(CONFIG.to.locale, {
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-    });
-
-    return `${whitespace}${sign}${CONFIG.to.symbol}${formatted}`;
+function pickHoverRoot(el) {
+    const anchor = el.closest('a');
+    if (anchor) return anchor;
+    let cur = el.parentElement;
+    while (cur && cur !== document.body) {
+        const role = cur.getAttribute('role');
+        if (role === 'link' || role === 'button') {
+            // If a sibling <a> overlay covers this element, attach to the shared parent instead
+            const par = cur.parentElement;
+            if (par && par.querySelector(':scope > a')) return par;
+            return cur;
+        }
+        cur = cur.parentElement;
+    }
+    return el;
 }
 
 function run() {
-    // Create a Walker that ONLY looks at text nodes
     const walker = document.createTreeWalker(
         document.body,
         NodeFilter.SHOW_TEXT,
         {
             acceptNode: (node) => {
-                // Skip if it doesn't have the symbol or is inside an already converted parent
                 if (!node.textContent.includes(CONFIG.from.symbol)) return NodeFilter.FILTER_REJECT;
-                if (node.parentElement.hasAttribute(CONVERTED_ATTR)) return NodeFilter.FILTER_REJECT;
-                
-                // Skip Wallet/Sell Dialog IDs
-                const parentId = node.parentElement.id;
-                if (['marketWalletBalanceAmount', 'header_wallet_balance', 'usd_receive_preview', 'usd_buyer_preview', 'ext-wallet-display'].includes(parentId)) {
-                    return NodeFilter.FILTER_REJECT;
+                if (node.parentElement.hasAttribute(CONVERTED_ATTR)) {
+                    // Dynamic content (e.g. bundles) can reset text after conversion.
+                    // If ₴ is back and we're not mid-hover, clear the marker so it re-converts.
+                    if (node.parentElement.hasAttribute('data-cc-hovering')) return NodeFilter.FILTER_REJECT;
+                    node.parentElement.removeAttribute(CONVERTED_ATTR);
                 }
-                
+                if (SPECIALTY_IDS.includes(node.parentElement.id)) return NodeFilter.FILTER_REJECT;
                 return NodeFilter.FILTER_ACCEPT;
             }
         }
@@ -64,9 +71,16 @@ function run() {
             parent.setAttribute(CONVERTED_ATTR, "true");
             node.textContent = newText;
 
-            // Hover toggle (on the parent, since text nodes can't have listeners)
-            parent.onmouseenter = () => { if (parent.childNodes[0]) parent.childNodes[0].textContent = originalText; };
-            parent.onmouseleave = () => { if (parent.childNodes[0]) parent.childNodes[0].textContent = newText; };
+            const textNode = node;
+            const hoverRoot = pickHoverRoot(parent);
+            hoverRoot.addEventListener('mouseenter', () => {
+                parent.setAttribute('data-cc-hovering', 'true');
+                textNode.textContent = originalText;
+            });
+            hoverRoot.addEventListener('mouseleave', () => {
+                parent.removeAttribute('data-cc-hovering');
+                textNode.textContent = newText;
+            });
         }
     }
 
@@ -74,14 +88,12 @@ function run() {
     handleSellInputs(handleUniversalWallet());
 }
 
-
-// 4. SPECIALTY HANDLERS
 function handleUniversalWallet() {
     for (const selector of ['#marketWalletBalanceAmount', '#header_wallet_balance']) {
         const el = document.querySelector(selector);
         if (!el) continue;
         const original = el.textContent.trim();
-        if (!PRICE_MATCH_REGEX.test(original)) continue; // already converted or not a price
+        if (!PRICE_MATCH_REGEX.test(original)) continue;
 
         const converted = convertPrice(original);
         el.textContent = el.id === 'marketWalletBalanceAmount'
@@ -97,14 +109,14 @@ function handleUniversalWallet() {
     return '';
 }
 
+const TOOLTIP_SELECTOR = '.jqplot-highlighter-tooltip, .jqplot-cursor-tooltip';
+
 function handleGraphTooltip() {
-    const tooltips = document.querySelectorAll('.jqplot-highlighter-tooltip, .jqplot-cursor-tooltip');
+    const tooltips = document.querySelectorAll(TOOLTIP_SELECTOR);
     tooltips.forEach(tooltip => {
         if (tooltip.style.display === 'none' || !tooltip.textContent.includes(CONFIG.from.symbol)) return;
         const newHtml = tooltip.innerHTML.replace(PRICE_REGEX, (match) => convertPrice(match));
-        if (newHtml !== tooltip.innerHTML) {
-            tooltip.innerHTML = newHtml;
-        }
+        if (newHtml !== tooltip.innerHTML) tooltip.innerHTML = newHtml;
     });
 }
 
@@ -119,7 +131,6 @@ function handleSellInputs(originalWalletText = '') {
         const createLabel = (id, parent, isWallet = false) => {
             const lbl = document.createElement('div');
             lbl.id = id;
-            
             if (isWallet && zoomControls) {
                 const row = document.createElement('div');
                 row.className = 'ext-wallet-row';
@@ -144,15 +155,12 @@ function handleSellInputs(originalWalletText = '') {
     const updateValues = () => {
         const rLabel = document.getElementById('usd_receive_preview');
         const bLabel = document.getElementById('usd_buyer_preview');
-
         const cleanNum = (val) => {
-            const sanitized = val.replace(/[^\d.,]/g, '').replace(',', '.');
-            const parsed = parseFloat(sanitized);
+            const parsed = parseFloat(val.replace(/[^\d.,]/g, '').replace(',', '.'));
             return isNaN(parsed) ? 0 : parsed;
         };
-
-        if (rLabel) rLabel.textContent = `${CONFIG.to.code}: ${CONFIG.to.symbol}${(cleanNum(receiveInput.value) * CONFIG.rate).toFixed(2)}`;
-        if (bLabel) bLabel.textContent = `${CONFIG.to.code}: ${CONFIG.to.symbol}${(cleanNum(buyerInput.value) * CONFIG.rate).toFixed(2)}`;
+        if (rLabel) rLabel.textContent = `${CONFIG.to.code}: ${CONFIG.to.symbol}${formatUSD(cleanNum(receiveInput.value) * CONFIG.rate)}`;
+        if (bLabel) bLabel.textContent = `${CONFIG.to.code}: ${CONFIG.to.symbol}${formatUSD(cleanNum(buyerInput.value) * CONFIG.rate)}`;
     };
 
     if (!receiveInput.dataset.hasListener) {
@@ -165,7 +173,6 @@ function handleSellInputs(originalWalletText = '') {
     updateValues();
 }
 
-// 5. OBSERVER & ENGINE
 let timeout;
 function scheduleRun() {
     clearTimeout(timeout);
@@ -173,24 +180,19 @@ function scheduleRun() {
 }
 
 function startObserver() {
-    const observer = new MutationObserver(() => scheduleRun());
-    observer.observe(document.body, { childList: true, subtree: true });
-}
-
-if (document.body) {
-    run();
-    startObserver();
-} else {
-    const bodyObserver = new MutationObserver((m, obs) => {
-        if (document.body) {
-            obs.disconnect();
-            run();
-            startObserver();
+    const observer = new MutationObserver((mutations) => {
+        const onlyTooltips = mutations.every(m =>
+            m.target.matches?.(TOOLTIP_SELECTOR) ||
+            m.target.closest?.(TOOLTIP_SELECTOR)
+        );
+        if (onlyTooltips) {
+            handleGraphTooltip();
+        } else {
+            scheduleRun();
         }
     });
-    bodyObserver.observe(document.documentElement, { childList: true });
+    observer.observe(document.body, { childList: true, subtree: true, characterData: true });
 }
 
-document.addEventListener('mousemove', () => {
-    if (document.querySelector('.jqplot-target')) handleGraphTooltip();
-}, { passive: true });
+run();
+startObserver();
