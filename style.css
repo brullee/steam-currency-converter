@@ -26,6 +26,30 @@
     text-align: left !important;
 }
 
+/* Per-item preview — flows above the input, not absolutely positioned */
+#usd_buy_price_preview {
+    font-size: 13px !important;
+    position: static !important;
+    display: block !important;
+    margin-bottom: 4px !important;
+    bottom: auto !important;
+}
+
+/* Max price div — match wallet style: green, bold, readable */
+#market_buy_commodity_order_total {
+    color: #85bb65 !important;
+    font-weight: bold !important;
+    font-size: 13px !important;
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+
+/* Keep the max price label vertically centered to match the two-line value */
+.market_buy_commodity_input_row:has(#market_buy_commodity_order_total) .market_buy_commodity_input_label {
+    vertical-align: middle !important;
+}
+
+
 /* Keep Steam's internal groups from wrapping, and anchor the preview label */
 .market_sell_dialog_input_group {
     white-space: nowrap !important;
