@@ -59,7 +59,6 @@ function buildRegexes(currency) {
 
 // Scans page text for the first currency whose pattern matches any price.
 // Tries longer symbols first to avoid false matches (e.g. CDN$ before $, R$ before R).
-// JPY and CNY share ¥ — disambiguated by decimal point presence (JPY is integer-only).
 function detectFromCurrency() {
     const bodyText = document.body.textContent;
     const sorted = Object.entries(CURRENCIES)
@@ -67,10 +66,7 @@ function detectFromCurrency() {
     for (const [code, currency] of sorted) {
         const { scan } = buildRegexes(currency);
         scan.lastIndex = 0;
-        const m = scan.exec(bodyText);
-        if (!m) continue;
-        if (code === 'JPY') return m[2].includes('.') ? 'CNY' : 'JPY';
-        return code;
+        if (scan.exec(bodyText)) return code;
     }
     return null; // prices not visible yet
 }

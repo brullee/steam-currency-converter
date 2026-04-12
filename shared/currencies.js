@@ -28,10 +28,9 @@ const CURRENCIES = {
     HKD: { symbol: 'HK$',     position: 'before', numberFormat: 'en-HK' },  // HK$ 17.68
     UYU: { symbol: '$U',      position: 'before', numberFormat: 'es-UY' },  // $U84
     KRW: { symbol: '\u20A9',  position: 'before', numberFormat: 'ko-KR' },  // ₩ 3,030
-    MXN: { symbol: 'Mex$',    position: 'before', numberFormat: 'es-MX' },  // Mex$ 34.33
+    MXN: { symbol: 'Mex$',    position: 'before', numberFormat: 'es-MX' },  // Mex$34.33
     COP: { symbol: 'COL$',    position: 'before', numberFormat: 'es-CO' },  // COL$ 7140
-    JPY: { symbol: '\u00A5',  position: 'before', numberFormat: 'ja-JP' },  // ¥ 312     (whole numbers only — see detectFromCurrency in content.js)
-    CNY: { symbol: '\u00A5',  position: 'before', numberFormat: 'zh-CN' },  // ¥ 11.22   (has decimal   — see detectFromCurrency in content.js)
+    JPY: { symbol: '\u00A5',  position: 'before', numberFormat: 'ja-JP' },  // ¥ 312
     PEN: { symbol: 'S/.',     position: 'before', numberFormat: 'es-PE' },  // S/.6.46
     THB: { symbol: '\u0E3F',  position: 'before', numberFormat: 'th-TH' },  // ฿60.86
     MYR: { symbol: 'RM',      position: 'before', numberFormat: 'ms-MY' },  // RM7.39
