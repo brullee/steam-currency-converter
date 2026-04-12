@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+    <div class="header-row">
+        <h1>Currency Converter</h1>
+        <label class="toggle" title="Enable / disable conversion">
+            <input type="checkbox" id="conversion-enabled">
+            <span class="toggle-track">
+                <span class="toggle-thumb"></span>
+            </span>
+        </label>
+    </div>
+
+    <div id="settings">
+        <label for="to-currency">Convert prices to</label>
+        <input id="to-currency" list="to-currency-list" placeholder="e.g. JOD, USD, EUR" autocomplete="off" spellcheck="false">
+        <datalist id="to-currency-list"></datalist>
+
+        <label for="from-currency">Store currency</label>
+        <select id="from-currency">
+            <option value="">Auto-detect</option>
+        </select>
+
+        <label class="checkbox-label">
+            <input type="checkbox" id="strip-trailing">
+            Remove USD trail
+        </label>
+    </div>
+
+    <button id="save">Save &amp; Refresh page</button>
+    <p id="status"></p>
+
+    <script src="../shared/currencies.js"></script>
+    <script src="popup.js"></script>
+</body>
+</html>

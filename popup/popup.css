@@ -1,0 +1,176 @@
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    width: 220px;
+    padding: 16px;
+    font-family: "Motiva Sans", Arial, sans-serif;
+    background: #1b2838;
+    color: #c6d4df;
+}
+
+.header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+h1 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #66c0f4;
+    margin-bottom: 0;
+}
+
+/* Toggle switch */
+.toggle {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 20px;
+    flex-shrink: 0;
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+    margin: 0;
+    padding: 0;
+}
+
+.toggle-track {
+    position: absolute;
+    inset: 0;
+    background: #233749;
+    border: 1px solid #4c91b5;
+    border-radius: 20px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+.toggle-thumb {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    background: #4c91b5;
+    border-radius: 50%;
+    transition: transform 0.2s, background 0.2s;
+}
+
+.toggle input:checked + .toggle-track {
+    background: #1a4f7a;
+    border-color: #66c0f4;
+}
+
+.toggle input:checked + .toggle-track .toggle-thumb {
+    transform: translateX(16px);
+    background: #66c0f4;
+}
+
+/* Dim settings when conversion is off */
+#settings {
+    transition: opacity 0.15s;
+}
+
+#settings.disabled {
+    opacity: 0.35;
+    pointer-events: none;
+}
+
+label {
+    display: block;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #8f98a0;
+    margin-bottom: 6px;
+}
+
+input {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 13px;
+    background: #316282;
+    border: 1px solid #4c91b5;
+    border-radius: 3px;
+    color: #ffffff;
+    outline: none;
+    margin-bottom: 10px;
+}
+
+input:focus {
+    border-color: #66c0f4;
+}
+
+select {
+    width: 100%;
+    padding: 7px 10px;
+    font-size: 13px;
+    background: #316282;
+    border: 1px solid #4c91b5;
+    border-radius: 3px;
+    color: #ffffff;
+    outline: none;
+    margin-bottom: 10px;
+    cursor: pointer;
+}
+
+select:focus {
+    border-color: #66c0f4;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    text-transform: none;
+    letter-spacing: normal;
+    color: #c6d4df;
+    cursor: pointer;
+    margin-bottom: 12px;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    accent-color: #66c0f4;
+}
+
+button {
+    width: 100%;
+    padding: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    background: linear-gradient(to bottom, #4d8ab5, #356a94);
+    border: none;
+    border-radius: 3px;
+    color: #ffffff;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+button:hover {
+    background: linear-gradient(to bottom, #66c0f4, #4d9bc2);
+}
+
+#status {
+    font-size: 11px;
+    color: #a4d65e;
+    margin-top: 8px;
+    min-height: 16px;
+    text-align: center;
+}

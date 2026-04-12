@@ -13,7 +13,7 @@
     font-size: 13px;
 }
 
-.usd-input-preview {
+.cc-input-preview {
     color: #85bb65 !important;
     font-weight: bold !important;
     font-size: 11px !important;
@@ -27,7 +27,7 @@
 }
 
 /* Per-item preview — flows above the input, not absolutely positioned */
-#usd_buy_price_preview {
+#cc_buy_price_preview {
     font-size: 13px !important;
     position: static !important;
     display: block !important;

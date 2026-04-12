@@ -32,9 +32,9 @@ Works across the platform (store, marketplace, wallet, dialogs) and updates dyna
 
 ##  Roadmap
 
-- [ ] Multi-currency support.
-- [ ] Extension UI (popup + settings).
-- [ ] Live exchange rates (API or alternative sources).
+- [x] Multi-currency support.
+- [x] Extension UI (popup + settings).
+- [x] Live exchange rates (API or alternative sources).
 - [ ] User options (toggle, display preferences).
 - [ ] Chrome & Firefox store release.
 
