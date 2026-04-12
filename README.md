@@ -47,18 +47,18 @@ Help users understand prices on Steam without relying on external conversion too
 
 These are the Steam store currencies the extension can detect and convert *from*. The target currency — what you convert *to* — can be any ISO 4217 currency code, even ones not listed here.
 
-**Europe**: EUR, GBP, UAH, RUB, KZT, PLN, NOK, CHF.  
-**Middle East**: AED, QAR, KWD, SAR  
-**Asia Pacific**: JPY, KRW, SGD, HKD, TWD, MYR, THB, IDR, INR, VND, PHP  
-**Oceania**  AUD, NZD  
-**Americas**: USD, CAD, MXN, BRL, COP, CLP, PEN, UYU, CRC  
-**Africa**: ZAR
+- **Europe** — EUR, GBP, UAH, RUB, KZT, PLN, NOK, CHF.  
+- **Middle East** — AED, QAR, KWD, SAR.  
+- **Asia Pacific** — JPY, KRW, SGD, HKD, TWD, MYR, THB, IDR, INR, VND, PHP.  
+- **Oceania** — AUD, NZD.  
+- **Americas** — USD, CAD, MXN, BRL, COP, CLP, PEN, UYU, CRC.  
+- **Africa** — ZAR.
 
 **Not supported**
 
 - **CNY** — Steam China runs on a separate platform (Steamworks China).
 - **ILS** — not supported on principle.
-
+  
 ### Roadmap
 
 - [x] Multi-currency support.
