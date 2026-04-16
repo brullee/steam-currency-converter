@@ -19,12 +19,16 @@
 
   "browser_specific_settings": {
     "gecko": {
-      "id": "steam-currency-converter@local"
+      "id": "steam-currency-converter@local",
+      "data_collection_permissions": {
+        "required": ["none"],
+        "optional": []
+      }
     }
   },
 
   "permissions": ["storage", "tabs"],
-  "background": { "service_worker": "background/background.js", "scripts": ["background/background.js"] },
+  "background": { "scripts": ["background/background.js"] },
   
   "host_permissions": [
     "*://store.steampowered.com/*",

@@ -369,9 +369,15 @@ function convertGraphTooltips() {
         if (tooltip.style.display === 'none') return;
         PRICE_REGEX.lastIndex = 0;
         if (!PRICE_REGEX.test(tooltip.textContent)) return;
-        PRICE_REGEX.lastIndex = 0;
-        const converted = tooltip.innerHTML.replace(PRICE_REGEX, m => convertPriceText(m));
-        if (converted !== tooltip.innerHTML) tooltip.innerHTML = converted;
+        const walker = document.createTreeWalker(tooltip, NodeFilter.SHOW_TEXT);
+        let node;
+        while ((node = walker.nextNode())) {
+            PRICE_REGEX.lastIndex = 0;
+            if (PRICE_REGEX.test(node.nodeValue)) {
+                PRICE_REGEX.lastIndex = 0;
+                node.nodeValue = node.nodeValue.replace(PRICE_REGEX, m => convertPriceText(m));
+            }
+        }
     });
 }
 
@@ -436,7 +442,9 @@ function updateBuyPreviews() {
     if (totalDiv) {
         const text = totalDiv.textContent.trim();
         if (PRICE_MATCH_REGEX.test(text)) {
-            totalDiv.innerHTML = `${convertPriceText(text)}<br>(${text})`;
+            totalDiv.textContent = convertPriceText(text);
+            totalDiv.appendChild(document.createElement('br'));
+            totalDiv.appendChild(document.createTextNode(`(${text})`));
         }
     }
 
@@ -482,7 +490,13 @@ function updateBuyPreviews() {
     if (amountSpan && PRICE_MATCH_REGEX.test(amountSpan.textContent.trim())) {
         const formatted  = withOriginal(amountSpan.textContent.trim());
         const walletSpan = document.getElementById('market_buyorder_dialog_walletbalance');
-        if (walletSpan) walletSpan.innerHTML = `<span id="market_buyorder_dialog_walletbalance_amount">${formatted}</span>`;
+        if (walletSpan) {
+            const newSpan = document.createElement('span');
+            newSpan.id = 'market_buyorder_dialog_walletbalance_amount';
+            newSpan.textContent = formatted;
+            walletSpan.textContent = '';
+            walletSpan.appendChild(newSpan);
+        }
         else amountSpan.textContent = formatted;
     }
 }
