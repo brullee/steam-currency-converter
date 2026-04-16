@@ -191,7 +191,10 @@ function findHoverTarget(el) {
                     }
                     cur = cur.parentElement;
                 }
-                if (!result) result = el;
+                // New UI fallback: if no card-level role target was found, group prices
+                // under the ancestor that owns the sale badge (StoreSaleDiscountBox) so
+                // both the original and final prices toggle together on hover.
+                if (!result) result = el.closest(':has(> .StoreSaleDiscountBox)') || el;
             }
         }
     }

@@ -7,7 +7,7 @@ const escapeRegex = str => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 const CURRENCIES = {
     // symbol-after currencies
     UAH: { symbol: '\u20B4',  position: 'after',  numberFormat: 'uk-UA' },  // 63₴
-    RUB: { symbol: '\u0440\u0443\u0431.', position: 'after', numberFormat: 'ru-RU' }, // 1100 руб.
+    RUB: { symbol: '\u0440\u0443\u0431.', altSymbol: '\u0440\u0443\u0431', position: 'after', numberFormat: 'ru-RU' }, // 1100 руб. or 1100 руб
     KZT: { symbol: '\u20B8',  position: 'after',  numberFormat: 'kk-KZ' },  // 782₸
     EUR: { symbol: '\u20AC',  position: 'after',  numberFormat: 'de-DE' },  // 2,64€
     PLN: { symbol: 'z\u0142', position: 'after',  numberFormat: 'pl-PL' },  // 12,57zł
@@ -31,6 +31,7 @@ const CURRENCIES = {
     MXN: { symbol: 'Mex$',    position: 'before', numberFormat: 'es-MX' },  // Mex$34.33
     COP: { symbol: 'COL$',    position: 'before', numberFormat: 'es-CO' },  // COL$ 7140
     JPY: { symbol: '\u00A5',  position: 'before', numberFormat: 'ja-JP' },  // ¥ 312
+    CNY: { symbol: '\u00A5', position: 'before', numberFormat: 'zh-CN', toOnly: true },  // ¥ 38.00
     PEN: { symbol: 'S/.',     position: 'before', numberFormat: 'es-PE' },  // S/.6.46
     THB: { symbol: '\u0E3F',  position: 'before', numberFormat: 'th-TH' },  // ฿60.86
     MYR: { symbol: 'RM',      position: 'before', numberFormat: 'ms-MY' },  // RM7.39
@@ -39,7 +40,7 @@ const CURRENCIES = {
     ZAR: { symbol: 'R', requireDecimal: true, position: 'before', numberFormat: 'en-ZA' }, // R 27.88
     CRC: { symbol: '\u20A1',  position: 'before', numberFormat: 'es-CR' },  // ₡1.275
     TWD: { symbol: 'NT$',     position: 'before', numberFormat: 'zh-TW' },  // NT$ 51
-    PHP: { symbol: '\u20B1', altSymbol: 'P', position: 'before', numberFormat: 'fil-PH' }, // ₱93.48 or P93.48 (Steam uses both)
+    PHP: { symbol: '\u20B1', altSymbol: 'P', position: 'before', numberFormat: 'fil-PH' }, // ₱93.48 or P93.48
     IDR: { symbol: 'Rp',      position: 'before', numberFormat: 'id-ID' },  // Rp 25160
     INR: { symbol: '\u20B9',  position: 'before', numberFormat: 'en-IN' },  // ₹ 136
 };

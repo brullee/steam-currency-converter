@@ -9,6 +9,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     for (const [code, meta] of Object.entries(CURRENCIES)) {
         allCurrencies.push({ code, label: `${code}  ${meta.symbol}` });
 
+        if (meta.toOnly) continue;
         const selectOption = document.createElement('option');
         selectOption.value = code;
         selectOption.textContent = `${code}  ${meta.symbol}`;
