@@ -1,3 +1,7 @@
+:root {
+    --color-converted: #85bb65;
+}
+
 .ext-wallet-row {
     display: flex !important;
     align-items: center !important;
@@ -8,13 +12,13 @@
 }
 
 #ext-wallet-display {
-    color: #85bb65;
+    color: var(--color-converted);
     font-weight: bold;
     font-size: 13px;
 }
 
 .cc-input-preview {
-    color: #85bb65 !important;
+    color: var(--color-converted) !important;
     font-weight: bold !important;
     font-size: 11px !important;
     font-family: 'Motiva Sans', Sans-serif !important;
@@ -26,18 +30,21 @@
     text-align: left !important;
 }
 
-/* Per-item preview — flows above the input, not absolutely positioned */
+/* Per-item preview — its own row above the price input */
 #cc_buy_price_preview {
-    font-size: 13px !important;
     position: static !important;
-    display: block !important;
-    margin-bottom: 4px !important;
     bottom: auto !important;
+    font-size: 13px !important;
+}
+
+#cc_buy_price_row .market_buy_commodity_input_label,
+#cc_buy_price_row .market_buy_commodity_input {
+    vertical-align: middle !important;
 }
 
 /* Max price div — match wallet style: green, bold, readable */
 #market_buy_commodity_order_total {
-    color: #85bb65 !important;
+    color: var(--color-converted) !important;
     font-weight: bold !important;
     font-size: 13px !important;
     text-align: center !important;

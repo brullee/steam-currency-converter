@@ -1,3 +1,17 @@
+:root {
+    --color-bg:             #1b2838;
+    --color-text:           #c6d4df;
+    --color-text-muted:     #8f98a0;
+    --color-accent:         #66c0f4;
+    --color-white:          #ffffff;
+    --color-input-bg:       #316282;
+    --color-border:         #4c91b5;
+    --color-toggle-bg:      #233749;
+    --color-toggle-checked: #1a4f7a;
+    --color-btn-top:        #4d8ab5;
+    --color-btn-bottom:     #356a94;
+}
+
 * {
     box-sizing: border-box;
     margin: 0;
@@ -8,8 +22,8 @@ body {
     width: 220px;
     padding: 16px;
     font-family: "Motiva Sans", Arial, sans-serif;
-    background: #1b2838;
-    color: #c6d4df;
+    background: var(--color-bg);
+    color: var(--color-text);
 }
 
 .header-row {
@@ -24,8 +38,7 @@ h1 {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #66c0f4;
-    margin-bottom: 0;
+    color: var(--color-accent);
 }
 
 /* Toggle switch */
@@ -35,7 +48,6 @@ h1 {
     width: 36px;
     height: 20px;
     flex-shrink: 0;
-    margin-bottom: 0;
     cursor: pointer;
 }
 
@@ -44,17 +56,15 @@ h1 {
     width: 0;
     height: 0;
     position: absolute;
-    margin: 0;
-    padding: 0;
 }
 
 .toggle-track {
     position: absolute;
     inset: 0;
-    background: #233749;
-    border: 1px solid #4c91b5;
+    background: var(--color-toggle-bg);
+    border: 1px solid var(--color-border);
     border-radius: 20px;
-    transition: background 0.2s, border-color 0.2s;
+    transition: background 0.15s ease-out, border-color 0.15s ease-out, filter 0.15s ease-out;
 }
 
 .toggle-thumb {
@@ -63,29 +73,34 @@ h1 {
     left: 2px;
     width: 14px;
     height: 14px;
-    background: #4c91b5;
+    background: var(--color-border);
     border-radius: 50%;
-    transition: transform 0.2s, background 0.2s;
+    transition: transform 0.15s ease-out, background 0.15s ease-out;
+}
+
+.toggle:hover .toggle-track {
+    filter: brightness(1.15);
+}
+
+.toggle:active .toggle-thumb {
+    transform: scale(0.9);
 }
 
 .toggle input:checked + .toggle-track {
-    background: #1a4f7a;
-    border-color: #66c0f4;
+    background: var(--color-toggle-checked);
+    border-color: var(--color-accent);
 }
 
 .toggle input:checked + .toggle-track .toggle-thumb {
     transform: translateX(16px);
-    background: #66c0f4;
+    background: var(--color-accent);
 }
 
-/* Dim settings when conversion is off */
-#settings {
-    transition: opacity 0.15s;
-}
-
-#settings.disabled {
+/* Dim individual fields when they are unavailable */
+.field-dimmed {
     opacity: 0.35;
     pointer-events: none;
+    transition: opacity 0.15s;
 }
 
 label {
@@ -93,60 +108,197 @@ label {
     font-size: 11px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #8f98a0;
+    color: var(--color-text-muted);
     margin-bottom: 6px;
 }
 
-input {
+input, select {
     width: 100%;
     padding: 7px 10px;
+    font-family: inherit;
     font-size: 13px;
-    background: #316282;
-    border: 1px solid #4c91b5;
+    background: var(--color-input-bg);
+    border: 1px solid var(--color-border);
     border-radius: 3px;
-    color: #ffffff;
+    color: var(--color-white);
     outline: none;
     margin-bottom: 10px;
 }
 
-input:focus {
-    border-color: #66c0f4;
+input:focus, select:focus {
+    border-color: var(--color-accent);
 }
 
 select {
-    width: 100%;
-    padding: 7px 10px;
-    font-size: 13px;
-    background: #316282;
-    border: 1px solid #4c91b5;
-    border-radius: 3px;
-    color: #ffffff;
-    outline: none;
-    margin-bottom: 10px;
+    /* Reset native appearance so background/border/font render identically
+       in Chrome and Firefox. Without this Firefox shows its own native widget. */
+    appearance: none;
+    -webkit-appearance: none;
     cursor: pointer;
 }
 
-select:focus {
-    border-color: #66c0f4;
-}
-
-.checkbox-label {
+.checkbox-label,
+.radio-label {
     display: flex;
     align-items: center;
-    gap: 8px;
     font-size: 11px;
     text-transform: none;
     letter-spacing: normal;
-    color: #c6d4df;
+    color: var(--color-text);
     cursor: pointer;
-    margin-bottom: 12px;
+    transition: color 0.12s ease-out;
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label {
+    gap: 8px;
+    margin-bottom: 12px;
+    position: relative;
+}
+
+.radio-label {
+    gap: 4px;
+}
+
+.checkbox-label:hover,
+.radio-label:hover {
+    color: var(--color-white);
+}
+
+.checkbox-label input[type="checkbox"],
+.radio-label input[type="radio"] {
     width: auto;
-    margin: 0;
     padding: 0;
-    accent-color: #66c0f4;
+    margin-bottom: 0;
+    accent-color: var(--color-accent);
+    filter: brightness(1);
+    transition: filter 0.12s ease-out, transform 0.06s ease-out;
+}
+
+.checkbox-label:active input[type="checkbox"],
+.radio-label:active input[type="radio"] {
+    transform: scale(0.85);
+}
+
+.checkbox-label:hover input[type="checkbox"],
+.radio-label:hover input[type="radio"] {
+    filter: brightness(1.2);
+}
+
+.radio-label:has(input:disabled) {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+.tooltip-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    background: var(--color-border);
+    color: var(--color-bg);
+    font-size: 9px;
+    font-weight: 700;
+    cursor: default;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+.tooltip-icon::after {
+    content: "Hides the trailing 'USD' some regions append to prices (e.g. $9.99 USD → $9.99).";
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    right: 0;
+    padding: 6px 8px;
+    background: var(--color-toggle-bg);
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    color: var(--color-text);
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    white-space: normal;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    z-index: 10;
+}
+
+.tooltip-icon:hover::after {
+    opacity: 1;
+}
+
+.back-btn {
+    width: auto;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--color-accent);
+    font-size: 10px;
+    line-height: 1;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: color 0.12s ease-out, transform 0.06s ease-out;
+}
+
+.back-btn:hover {
+    background: none;
+    color: var(--color-white);
+}
+
+.back-btn:active {
+    transform: scale(0.9);
+}
+
+.link-btn {
+    width: auto;
+    padding: 0;
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: normal;
+    cursor: pointer;
+    display: block;
+    margin: 8px auto 0;
+    transition: color 0.12s ease-out, transform 0.06s ease-out;
+}
+
+.link-btn:hover {
+    background: none;
+    color: var(--color-text);
+}
+
+.link-btn:active {
+    transform: scale(0.98);
+}
+
+.section-heading {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text);
+    margin-bottom: 10px;
+}
+
+.settings-divider {
+    border: none;
+    border-top: 1px solid var(--color-border);
+    opacity: 0.3;
+    margin: 12px 0;
+}
+
+.radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 button {
@@ -154,23 +306,56 @@ button {
     padding: 8px;
     font-size: 12px;
     font-weight: 600;
-    background: linear-gradient(to bottom, #4d8ab5, #356a94);
+    background: linear-gradient(to bottom, var(--color-btn-top), var(--color-btn-bottom));
     border: none;
     border-radius: 3px;
-    color: #ffffff;
+    color: var(--color-white);
     cursor: pointer;
     text-transform: uppercase;
     letter-spacing: 0.04em;
+    transition: filter 0.12s ease-out, transform 0.06s ease-out;
 }
 
 button:hover {
-    background: linear-gradient(to bottom, #66c0f4, #4d9bc2);
+    filter: brightness(1.15);
 }
 
-#status {
-    font-size: 11px;
-    color: #a4d65e;
-    margin-top: 8px;
-    min-height: 16px;
-    text-align: center;
+button:active {
+    transform: scale(0.97);
+}
+
+.cc-combobox {
+    position: relative;
+    margin-bottom: 10px;
+}
+
+.cc-combobox input {
+    margin-bottom: 0;
+}
+
+#to-currency-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 150px;
+    overflow-y: auto;
+    background: var(--color-input-bg);
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 3px 3px;
+    list-style: none;
+    z-index: 100;
+}
+
+#to-currency-dropdown li {
+    padding: 5px 10px;
+    font-size: 13px;
+    color: var(--color-white);
+    cursor: pointer;
+}
+
+#to-currency-dropdown li:hover,
+#to-currency-dropdown li[aria-selected="true"] {
+    background: var(--color-toggle-checked);
 }

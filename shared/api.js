@@ -5,7 +5,19 @@ let rate = 1;
 let rateReady = false;
 
 async function fetchRate(from, to) {
-    const response = await chrome.runtime.sendMessage({ type: 'fetchRate', from, to });
+    let response;
+    try {
+        response = await chrome.runtime.sendMessage({ type: 'fetchRate', from, to });
+    } catch (e) {
+        // Service worker was killed or extension was reloaded — wake it and retry once.
+        console.warn('[CurrencyConverter] sendMessage failed, retrying once.', e);
+        await new Promise(r => setTimeout(r, 300));
+        try {
+            response = await chrome.runtime.sendMessage({ type: 'fetchRate', from, to });
+        } catch (e2) {
+            console.warn('[CurrencyConverter] Retry failed, falling back to rate=1.', e2);
+        }
+    }
 
     if (response?.rate != null) {
         rate = response.rate;

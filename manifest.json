@@ -4,6 +4,14 @@
   "version": "1.0",
   "description": "Converts Steam prices",
 
+"icons": {
+    "16": "icons/steam-cc_16x16.png",
+    "32": "icons/steam-cc_32x32.png",
+    "48": "icons/steam-cc_48x48.png",
+    "64": "icons/steam-cc_64x64.png",
+    "128": "icons/steam-cc_128x128.png"
+  },
+
   "action": {
     "default_popup": "popup/popup.html",
     "default_title": "Steam Currency Converter"

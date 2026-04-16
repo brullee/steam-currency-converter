@@ -3,6 +3,11 @@ const ONE_DAY = 24 * 60 * 60 * 1000;
 // Bump this whenever a bad rate may have been cached, to force a fresh fetch.
 const V = 'v3';
 
+// Registering these listeners at the top level ensures Chrome keeps the service
+// worker alive long enough to handle messages and doesn't discard it immediately.
+chrome.runtime.onInstalled.addListener(() => {});
+chrome.runtime.onStartup.addListener(() => {});
+
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg.type !== 'fetchRate') return;
     getRate(msg.from, msg.to).then(sendResponse);
