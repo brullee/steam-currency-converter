@@ -137,10 +137,29 @@ select {
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
-    background-repeat: no-repeat;
-    background-position: right 10px center;
     padding-right: 28px;
+}
+
+.select-wrapper {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.select-wrapper select {
+    margin-bottom: 0;
+}
+
+.select-wrapper::after {
+    content: "";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-65%) rotate(45deg);
+    width: 5px;
+    height: 5px;
+    border-right: 2px solid var(--color-white);
+    border-bottom: 2px solid var(--color-white);
+    pointer-events: none;
 }
 
 .checkbox-label,

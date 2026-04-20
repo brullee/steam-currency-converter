@@ -27,9 +27,11 @@
             </div>
 
             <label for="from-currency">Store currency</label>
-            <select id="from-currency">
-                <option value="" disabled selected>Select Your Currency</option>
-            </select>
+            <div class="select-wrapper">
+                <select id="from-currency">
+                    <option value="" disabled selected>Select Your Currency</option>
+                </select>
+            </div>
 
             <label class="checkbox-label">
                 <input type="checkbox" id="hover-enabled">
@@ -88,13 +90,15 @@
         <p class="section-heading">Number format</p>
 
         <label for="thou-sep">Thousands separator</label>
-        <select id="thou-sep">
-            <option value="">Default</option>
-            <option value=".">Period (.)</option>
-            <option value=",">Comma (,)</option>
-            <option value=" ">Space ( )</option>
-            <option value="none">None</option>
-        </select>
+        <div class="select-wrapper">
+            <select id="thou-sep">
+                <option value="">Default</option>
+                <option value=".">Period (.)</option>
+                <option value=",">Comma (,)</option>
+                <option value=" ">Space ( )</option>
+                <option value="none">None</option>
+            </select>
+        </div>
 
         <label>Decimal separator</label>
         <div class="radio-row">
