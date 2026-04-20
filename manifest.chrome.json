@@ -1,0 +1,44 @@
+{
+  "manifest_version": 3,
+  "name": "Steam Currency Converter",
+  "version": "1.0",
+  "description": "Converts Steam prices",
+
+"icons": {
+    "16": "icons/steam-cc_16x16.png",
+    "32": "icons/steam-cc_32x32.png",
+    "48": "icons/steam-cc_48x48.png",
+    "64": "icons/steam-cc_64x64.png",
+    "128": "icons/steam-cc_128x128.png"
+  },
+
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Steam Currency Converter"
+  },
+
+
+  "permissions": ["storage", "tabs"],
+  "background": { "service_worker": "background/background.js" },
+
+  "host_permissions": [
+    "*://store.steampowered.com/*",
+    "*://steamcommunity.com/*",
+    "*://checkout.steampowered.com/*",
+    "*://api.exchangerate-api.com/*"
+  ],
+
+  "content_scripts": [
+    {
+      "matches": [
+        "*://store.steampowered.com/*",
+        "*://steamcommunity.com/*",
+        "*://checkout.steampowered.com/*"
+      ],
+      "js": ["shared/currencies.js", "shared/api.js", "content/content.js"],
+      "css": ["content/style.css"],
+      "run_at": "document_end",
+      "all_frames": true
+    }
+  ]
+}
