@@ -75,12 +75,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Load saved settings
     const stored = await chrome.storage.sync.get([
         'targetCurrency', 'fromCurrency', 'conversionEnabled',
-        'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
+        'hoverEnabled', 'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
         'decimalSep', 'thousandsSep', 'hideZeroDecimals',
     ]);
-    toCurrencyInput.value    = stored.targetCurrency || 'JOD';
+    toCurrencyInput.value    = stored.targetCurrency || '';
     fromCurrencySelect.value = stored.fromCurrency   || '';
     conversionToggle.checked = stored.conversionEnabled !== false;
+    document.getElementById('hover-enabled').checked   = stored.hoverEnabled !== false;
     document.getElementById('strip-trailing').checked  = !!stored.stripTrailingCode;
     document.getElementById('custom-symbol').value     = stored.customSymbol || '';
     document.getElementById('sym-space').checked       = !!stored.symbolSpace;
@@ -91,21 +92,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.querySelector(`input[name="sym-pos"][value="${posValue}"]`).checked = true;
     const decSepEl = document.querySelector(`input[name="dec-sep"][value="${stored.decimalSep || ''}"]`);
     if (decSepEl) decSepEl.checked = true;
-    const thouSepEl = document.querySelector(`input[name="thou-sep"][value="${stored.thousandsSep || ''}"]`);
-    if (thouSepEl) thouSepEl.checked = true;
+    document.getElementById('thou-sep').value = stored.thousandsSep || '';
     document.getElementById('hide-zero-decimals').checked = !!stored.hideZeroDecimals;
 
     // Separator mutual exclusion: whichever symbol is chosen for one, disable it in the other
+    const thouSelect = document.getElementById('thou-sep');
     const onDecChange = () => {
         const decVal = document.querySelector('input[name="dec-sep"]:checked')?.value || '';
-        document.querySelectorAll('input[name="thou-sep"]').forEach(r => {
-            const conflict = !!(decVal && r.value === decVal);
-            if (conflict && r.checked) document.querySelector('input[name="thou-sep"][value=""]').checked = true;
-            r.disabled = conflict;
+        thouSelect.querySelectorAll('option').forEach(opt => {
+            const conflict = !!(decVal && opt.value === decVal);
+            if (conflict && thouSelect.value === opt.value) thouSelect.value = '';
+            opt.disabled = conflict;
         });
     };
     const onThouChange = () => {
-        const thouVal = document.querySelector('input[name="thou-sep"]:checked')?.value || '';
+        const thouVal = thouSelect.value;
         document.querySelectorAll('input[name="dec-sep"]').forEach(r => {
             const conflict = !!(thouVal && r.value === thouVal);
             if (conflict && r.checked) document.querySelector('input[name="dec-sep"][value=""]').checked = true;
@@ -113,7 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
     document.querySelectorAll('input[name="dec-sep"]').forEach(r => r.addEventListener('change', onDecChange));
-    document.querySelectorAll('input[name="thou-sep"]').forEach(r => r.addEventListener('change', onThouChange));
+    thouSelect.addEventListener('change', onThouChange);
     onDecChange();
     onThouChange();
 
@@ -122,8 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const stripTrailingLabel = document.querySelector('label.checkbox-label:has(#strip-trailing)');
     const syncPanel = () => toCurrencyGroup.classList.toggle('field-dimmed', !conversionToggle.checked);
     const syncStripTrail = () => {
-        const isUsd = fromCurrencySelect.value === 'USD';
-        stripTrailingLabel.classList.toggle('field-dimmed', !isUsd);
+        stripTrailingLabel.hidden = fromCurrencySelect.value !== 'USD';
     };
     syncPanel();
     syncStripTrail();
@@ -152,9 +152,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const toCode            = toCurrencyInput.value.trim().toUpperCase();
         const fromCode          = fromCurrencySelect.value || null;
         const conversionEnabled = conversionToggle.checked;
+        const hoverEnabled      = document.getElementById('hover-enabled').checked;
         const stripTrailingCode = document.getElementById('strip-trailing').checked;
         if (!toCode || !fromCode) return;
-        saveAndRefresh({ targetCurrency: toCode, fromCurrency: fromCode, conversionEnabled, stripTrailingCode });
+        saveAndRefresh({ targetCurrency: toCode, fromCurrency: fromCode, conversionEnabled, hoverEnabled, stripTrailingCode });
     });
 
     // More settings save
@@ -164,7 +165,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const symbolSpace      = document.getElementById('sym-space').checked;
         const applyFormatting  = document.querySelector('input[name="apply-to"]:checked')?.value || 'converted';
         const decimalSep       = document.querySelector('input[name="dec-sep"]:checked')?.value  || '';
-        const thousandsSep     = document.querySelector('input[name="thou-sep"]:checked')?.value || '';
+        const thousandsSep     = document.getElementById('thou-sep').value;
         const hideZeroDecimals = document.getElementById('hide-zero-decimals').checked;
         saveAndRefresh({ customSymbol, symbolPosition, symbolSpace, applyFormatting, decimalSep, thousandsSep, hideZeroDecimals });
     });

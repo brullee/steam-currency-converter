@@ -30,7 +30,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 14px;
+    margin-bottom: 16px;
 }
 
 h1 {
@@ -96,6 +96,8 @@ h1 {
     background: var(--color-accent);
 }
 
+[hidden] { display: none !important; }
+
 /* Dim individual fields when they are unavailable */
 .field-dimmed {
     opacity: 0.35;
@@ -109,7 +111,7 @@ label {
     text-transform: uppercase;
     letter-spacing: 0.04em;
     color: var(--color-text-muted);
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 input, select {
@@ -122,7 +124,7 @@ input, select {
     border-radius: 3px;
     color: var(--color-white);
     outline: none;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
 }
 
 input:focus, select:focus {
@@ -135,6 +137,10 @@ select {
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23ffffff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round' fill='none'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 28px;
 }
 
 .checkbox-label,
@@ -259,10 +265,9 @@ select {
     background: none;
     border: none;
     color: var(--color-text-muted);
-    font-size: 11px;
-    font-weight: 400;
-    text-transform: none;
-    letter-spacing: normal;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
     cursor: pointer;
     display: block;
     margin: 8px auto 0;
@@ -326,7 +331,7 @@ button:active {
 
 .cc-combobox {
     position: relative;
-    margin-bottom: 10px;
+    margin-bottom: 16px;
 }
 
 .cc-combobox input {

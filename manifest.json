@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Steam Currency Converter",
-  "version": "1.0",
-  "description": "Converts Steam prices",
+  "version": "1.1",
+  "description": "Convert Steam prices to your chosen currency in real time. Supports 48 currencies with customizable symbols, number formatting, and market dialog support.",
 
 "icons": {
     "16": "icons/steam-cc_16x16.png",
@@ -17,19 +17,10 @@
     "default_title": "Steam Currency Converter"
   },
 
-  "browser_specific_settings": {
-    "gecko": {
-      "id": "steam-currency-converter@local",
-      "data_collection_permissions": {
-        "required": ["none"],
-        "optional": []
-      }
-    }
-  },
 
-  "permissions": ["storage", "tabs"],
-  "background": { "scripts": ["background/background.js"] },
-  
+  "permissions": ["storage"],
+  "background": { "service_worker": "background/background.js" },
+
   "host_permissions": [
     "*://store.steampowered.com/*",
     "*://steamcommunity.com/*",

@@ -14,6 +14,8 @@ let FROM, PRICE_REGEX, PRICE_MATCH_REGEX, TO;
 // because the "original" and "converted" values are the same currency.
 let strippingOnly = false;
 
+let hoverOn = true;
+
 // Mirrors the "Strip trailing USD" popup checkbox.
 // When true: " USD" is stripped from hover originals (hover shows "$9.99", not "$9.99 USD").
 // When false: hover shows the full original including " USD".
@@ -249,6 +251,7 @@ function runOnRoot(root) {
             acceptNode(node) {
                 const parent = node.parentElement;
                 if (!parent) return NodeFilter.FILTER_REJECT;
+                if (parent.closest('.itad-pricing, .es_regional')) return NodeFilter.FILTER_REJECT;
                 if (MANAGED_IDS.has(parent.id)) return NodeFilter.FILTER_REJECT;
                 if (parent.dataset.ccHovering)        return NodeFilter.FILTER_REJECT;
                 // Already converted at the current rate — nothing to do.
@@ -295,7 +298,7 @@ function runOnRoot(root) {
         parent.dataset.ccRate  = rateKey;   // stamp the rate so re-runs skip this node
         node.textContent = converted;
 
-        if (!strippingOnly) {
+        if (!strippingOnly && hoverOn) {
             // Strip " USD" from the hover display when the user opted in;
             // data-cc-orig always keeps the true original for re-run correctness.
             const hoverOriginal = stripUsdTrail
@@ -335,7 +338,7 @@ function convertWalletBalances() {
             : convertPriceText(original);
         el.textContent = converted;
 
-        if (el.id === 'header_wallet_balance' && !el.dataset.ccHoverSetup && !strippingOnly) {
+        if (el.id === 'header_wallet_balance' && !el.dataset.ccHoverSetup && !strippingOnly && hoverOn) {
             el.dataset.ccHoverSetup = 'true';
             el.addEventListener('mouseenter', () => {
                 el.dataset.ccHovering = 'true';
@@ -561,18 +564,19 @@ function startObserver() {
 async function init() {
     const stored = await chrome.storage.sync.get([
         'targetCurrency', 'fromCurrency', 'conversionEnabled',
-        'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
+        'hoverEnabled', 'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
         'decimalSep', 'thousandsSep', 'hideZeroDecimals',
     ]);
 
     const conversionOn    = stored.conversionEnabled !== false;
-    const applyFormatting = stored.applyFormatting || 'converted'; // 'converted' | 'unconverted' | 'both'
+    hoverOn               = stored.hoverEnabled !== false;
+    const applyFormatting = stored.applyFormatting || 'converted';
     stripUsdTrail         = !!stored.stripTrailingCode;
 
     if (stored.targetCurrency) CONFIG.to = stored.targetCurrency;
 
-    const applyOnConvert = applyFormatting === 'converted'   || applyFormatting === 'both';
-    const applyOnStrip   = applyFormatting === 'unconverted' || applyFormatting === 'both';
+    const applyOnConvert = applyFormatting === 'converted';
+    const applyOnStrip   = applyFormatting === 'unconverted';
 
     const manualFrom = stored.fromCurrency && CURRENCIES[stored.fromCurrency]
         ? stored.fromCurrency : null;

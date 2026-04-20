@@ -32,6 +32,11 @@
             </select>
 
             <label class="checkbox-label">
+                <input type="checkbox" id="hover-enabled">
+                Show original price on hover
+            </label>
+
+            <label class="checkbox-label">
                 <input type="checkbox" id="strip-trailing">
                 Remove USD trail
                 <span class="tooltip-icon">?</span>
@@ -53,6 +58,15 @@
             </button>
         </div>
 
+        <p class="section-heading">Behaviour</p>
+
+        <label>Apply settings when</label>
+        <div class="radio-row">
+            <label class="radio-label"><input type="radio" name="apply-to" value="converted">Converted</label>
+            <label class="radio-label"><input type="radio" name="apply-to" value="unconverted">Unconverted</label>
+        </div>
+
+        <hr class="settings-divider">
         <p class="section-heading">Symbol</p>
 
         <label for="custom-symbol">Currency symbol</label>
@@ -73,6 +87,15 @@
         <hr class="settings-divider">
         <p class="section-heading">Number format</p>
 
+        <label for="thou-sep">Thousands separator</label>
+        <select id="thou-sep">
+            <option value="">Default</option>
+            <option value=".">Period (.)</option>
+            <option value=",">Comma (,)</option>
+            <option value=" ">Space ( )</option>
+            <option value="none">None</option>
+        </select>
+
         <label>Decimal separator</label>
         <div class="radio-row">
             <label class="radio-label"><input type="radio" name="dec-sep" value="">Default</label>
@@ -80,29 +103,12 @@
             <label class="radio-label"><input type="radio" name="dec-sep" value=",">Comma</label>
         </div>
 
-        <label>Thousands separator</label>
-        <div class="radio-row">
-            <label class="radio-label"><input type="radio" name="thou-sep" value="">Default</label>
-            <label class="radio-label"><input type="radio" name="thou-sep" value=".">Period</label>
-            <label class="radio-label"><input type="radio" name="thou-sep" value=",">Comma</label>
-            <label class="radio-label"><input type="radio" name="thou-sep" value=" ">Space</label>
-            <label class="radio-label"><input type="radio" name="thou-sep" value="none">None</label>
-        </div>
-
         <label class="checkbox-label">
             <input type="checkbox" id="hide-zero-decimals">
             Hide decimals when zero (.00)
         </label>
 
-        <hr class="settings-divider">
-        <p class="section-heading">Behaviour</p>
 
-        <label>Apply settings when</label>
-        <div class="radio-row">
-            <label class="radio-label"><input type="radio" name="apply-to" value="converted">Converted</label>
-            <label class="radio-label"><input type="radio" name="apply-to" value="unconverted">Unconverted</label>
-            <label class="radio-label"><input type="radio" name="apply-to" value="both">Both</label>
-        </div>
 
         <button id="save-more">Save &amp; Refresh page</button>
     </div>
