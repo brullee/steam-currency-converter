@@ -171,7 +171,7 @@ const hoverTargetCache = new WeakMap();
 function findHoverTarget(el) {
     if (hoverTargetCache.has(el)) return hoverTargetCache.get(el);
     let result;
-    const marketCell = el.closest('.market_listing_row');
+    const marketCell = el.closest('.market_listing_row, .market_commodity_order_summary');
     if (marketCell) {
         result = marketCell;
     } else if (el.closest('a')) {
