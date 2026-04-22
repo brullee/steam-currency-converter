@@ -171,9 +171,11 @@ const hoverTargetCache = new WeakMap();
 function findHoverTarget(el) {
     if (hoverTargetCache.has(el)) return hoverTargetCache.get(el);
     let result;
-    const anchor = el.closest('a');
-    if (anchor) {
-        result = anchor;
+    const marketCell = el.closest('.market_listing_row');
+    if (marketCell) {
+        result = marketCell;
+    } else if (el.closest('a')) {
+        result = el.closest('a');
     } else {
         const purchaseAction = el.closest('.game_purchase_action_bg, .game_purchase_action');
         if (purchaseAction) {
@@ -573,12 +575,17 @@ async function init() {
     const applyFormatting = stored.applyFormatting || 'converted';
     stripUsdTrail         = !!stored.stripTrailingCode;
 
-    if (stored.targetCurrency) CONFIG.to = stored.targetCurrency;
+    const targetCurrency = (stored.targetCurrency === 'ILS' || stored.targetCurrency === 'ISL') ? null : stored.targetCurrency;
+    if (!targetCurrency) {
+        console.log('[CurrencyConverter] No target currency set — configure it in the popup.');
+        return;
+    }
+    CONFIG.to = targetCurrency;
 
     const applyOnConvert = applyFormatting === 'converted';
     const applyOnStrip   = applyFormatting === 'unconverted';
 
-    const manualFrom = stored.fromCurrency && CURRENCIES[stored.fromCurrency]
+    const manualFrom = stored.fromCurrency && stored.fromCurrency !== 'ILS' && stored.fromCurrency !== 'ISL' && CURRENCIES[stored.fromCurrency]
         ? stored.fromCurrency : null;
 
     if (!manualFrom) {

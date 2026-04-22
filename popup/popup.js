@@ -78,8 +78,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         'hoverEnabled', 'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
         'decimalSep', 'thousandsSep', 'hideZeroDecimals',
     ]);
-    toCurrencyInput.value    = stored.targetCurrency || '';
-    fromCurrencySelect.value = stored.fromCurrency   || '';
+    toCurrencyInput.value    = (stored.targetCurrency === 'ILS' || stored.targetCurrency === 'ISL') ? '' : (stored.targetCurrency || '');
+    fromCurrencySelect.value = (stored.fromCurrency   === 'ILS' || stored.fromCurrency   === 'ISL') ? '' : (stored.fromCurrency   || '');
     conversionToggle.checked = stored.conversionEnabled !== false;
     document.getElementById('hover-enabled').checked   = stored.hoverEnabled !== false;
     document.getElementById('strip-trailing').checked  = !!stored.stripTrailingCode;

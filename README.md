@@ -37,19 +37,25 @@ Prices on Steam will now show in your chosen currency. That's it.
 
 ## Installation
 
-### Chrome (store)
-Install from [Chrome Extensions](https://chromewebstore.google.com/detail/steam-currency-converter/kkpmhkmhbcdkagimlpcofbffhmdppmmb).
+### Browser
 
-### Firefox (store)
-Install from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/steam-currency-converter/), then grant permissions from the Manage Extensions tab.
-
-### Chrome (manual)
+**Chrome:** Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/steam-currency-converter/kkpmhkmhbcdkagimlpcofbffhmdppmmb), or load manually:
 1. Go to `chrome://extensions` and enable Developer Mode
 2. Click **Load unpacked** and point it at the extension folder
 
-### Firefox (manual)
+**Firefox:** Install from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/steam-currency-converter/) and grant permissions from the Manage Extensions tab, or load manually:
 1. Go to `about:debugging` and click **This Firefox**
 2. Click **Load Temporary Add-on** and select `manifest.json`
+
+### Steam Client
+
+You can run this extension directly inside the Steam desktop client using two community tools:
+
+1. Install **[Millennium](https://github.com/SteamClientHomebrew/Millennium)**, a plugin loader for the Steam client
+2. Install the **[Extendium](https://github.com/BossSloth/Extendium)** plugin via Millennium, which adds Chrome extension support to Steam
+3. Load this extension through Extendium like you would on chrome
+
+> **Disclaimer:** This is not officially supported by Valve and may violate their terms of service. Proceed at your own responsibility.
 
 
 ## What's included
@@ -76,7 +82,7 @@ When you open a buy or sell dialog on the Steam Community Market, the extension 
 
 Each currency ships with sensible locale defaults like German-style `2,64 €` or Vietnamese `312.000₫`. You can override any of it: set your own thousands and decimal separators, strip `.00` from round numbers, or replace the symbol entirely with any text you want. Symbol position (left or right) and spacing are configurable too.
 
-If your Steam store shows prices with a trailing ` USD` suffix (e.g. `$9.99 USD`), there's a checkbox to strip it. Useful even if you're not converting, just to keep prices cleaner.
+If your Steam store shows prices with a trailing `USD` suffix (e.g. `$9.99 USD`), there's a checkbox to strip it. Useful even if you're not converting, just to keep prices cleaner.
 
 ![Formatting settings](docs/images/Settings.png)
 
