@@ -4,19 +4,13 @@
 
 A browser extension that converts Steam prices to your preferred currency as you browse. Works across the store, community market, and checkout.
 
-<a href="https://addons.mozilla.org/en-US/firefox/addon/steam_currency_converter">
+<a href="https://chromewebstore.google.com/detail/steam-currency-converter/kkpmhkmhbcdkagimlpcofbffhmdppmmb">
+  <img src="docs/images/chrome.png" alt="Get it on Chrome">
+</a><a href="https://addons.mozilla.org/en-US/firefox/addon/steam_currency_converter">
   <img src="docs/images/firefox.png" alt="Get it on Firefox">
 </a>
-<!-- chrome badge (uncomment when live):
-<a href="">
-  <img src="docs/images/chrome.png" alt="Get it on Chrome">
-</a>
--->
-
-<sub>Chrome Web Store release coming soon</sub>
 
 </div>
-
 
 ## Overview
 
@@ -44,7 +38,7 @@ Prices on Steam will now show in your chosen currency. That's it.
 ## Installation
 
 ### Chrome (store)
-Coming soon.
+Install from [Chrome Extensions](https://chromewebstore.google.com/detail/steam-currency-converter/kkpmhkmhbcdkagimlpcofbffhmdppmmb).
 
 ### Firefox (store)
 Install from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/steam-currency-converter/), then grant permissions from the Manage Extensions tab.
@@ -95,7 +89,7 @@ The popup has two layers of settings.
 - Source and target currency
 - Toggle conversion on/off
 - Hover to reveal the original price
-- Strip trailing ` USD` from prices that show it redundantly
+- Strip trailing `USD` from prices that show it redundantly
 
 **Formatting (under "More settings"):**
 - Custom symbol text, position (left/right), and spacing
@@ -120,22 +114,22 @@ The popup has two layers of settings.
 - [x] Extension UI
 - [x] User preferences
 - [x] Firefox store release
-- [ ] Chrome store release
+- [x] Chrome store release
+- [ ] Make improvements to the product
 - [ ] Add support for other extensions
 - [ ] Add more currency symbols
 - [ ] Refactor code, Especially CSS files
-- [ ] Better icon
-
-
-## Issues
-
-Something broken or a currency behaving oddly? [Open an issue](https://github.com/brullee/steam-currency-converter/issues/new).
+- [ ] Make a better icon
 
 
 ## Disclaimer
 
 This extension is meant to give you a general idea of prices, not financial advice. Rates are updated daily but accuracy isn't guaranteed. Some currencies are spot on while others can be a bit off, and prices shown may not always be current or error-free. Double-check before making any purchase where it matters. I'm not responsible for any loss or inconvenience caused by using this extension. By using it, you agree that any consequences are your own responsibility.
 
+
+## Issues
+
+Something broken or a currency behaving oddly? [Open an issue](https://github.com/brullee/steam-currency-converter/issues/new).
 
 ## License
 
