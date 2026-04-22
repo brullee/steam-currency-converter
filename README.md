@@ -113,21 +113,6 @@ The popup has two layers of settings.
 - The background service worker retries failed rate fetches once and keeps itself alive across browser sessions
 
 
-## Roadmap
-
-- [x] Multi-currency support
-- [x] Live exchange rates
-- [x] Extension UI
-- [x] User preferences
-- [x] Firefox store release
-- [x] Chrome store release
-- [ ] Make improvements to the product
-- [ ] Add support for other extensions
-- [ ] Add more currency symbols
-- [ ] Refactor code, Especially CSS files
-- [ ] Make a better icon
-
-
 ## Disclaimer
 
 This extension is meant to give you a general idea of prices, not financial advice. Rates are updated daily but accuracy isn't guaranteed. Some currencies are spot on while others can be a bit off, and prices shown may not always be current or error-free. Double-check before making any purchase where it matters. I'm not responsible for any loss or inconvenience caused by using this extension. By using it, you agree that any consequences are your own responsibility.
