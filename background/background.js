@@ -20,9 +20,9 @@ async function getRate(from, to) {
 
     const stored = await chrome.storage.local.get([rateKey, tsKey]);
     const cached = stored[rateKey];
-    const ts     = stored[tsKey];
+    const timeStamp     = stored[tsKey];
 
-    if (typeof cached === 'number' && ts && Date.now() - ts < ONE_DAY) {
+    if (typeof cached === 'number' && timeStamp && Date.now() - timeStamp < ONE_DAY) {
         return { rate: cached };
     }
 

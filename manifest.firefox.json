@@ -43,7 +43,7 @@
         "*://steamcommunity.com/*",
         "*://checkout.steampowered.com/*"
       ],
-      "js": ["shared/currencies.js", "shared/api.js", "content/content.js"],
+      "js": ["shared/currencies.js", "shared/api.js", "content/state.js", "content/format.js", "content/hover.js", "content/market.js", "content/runner.js", "content/init.js"],
       "css": ["content/style.css"],
       "run_at": "document_end",
       "all_frames": true
