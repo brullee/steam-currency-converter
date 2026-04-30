@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="icons/steam-cc_128x128.png" alt="Steam Currency Converter">
+
 # Steam Currency Converter
 
 A browser extension that converts Steam prices to your preferred currency as you browse. Works across the store, community market, and checkout.
