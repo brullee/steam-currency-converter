@@ -46,8 +46,8 @@ function findHoverTarget(el) {
 }
 
 // Registers a text node under a hover target so mousing over the target temporarily
-// shows the original price. On re-runs (rate update), updates the stored converted
-// text in place rather than adding a duplicate entry.
+// shows the original price. On re-runs (rate update or the page changing the price),
+// updates the stored texts in place rather than adding a duplicate entry.
 // _ccEntryMap (WeakMap keyed by textNode) gives O(1) deduplication lookup instead
 // of the previous O(n) Array.find scan that ran once per price node per re-run.
 function setupHover(hoverTarget, textNode, originalText, convertedText, ownerEl) {
@@ -69,7 +69,9 @@ function setupHover(hoverTarget, textNode, originalText, convertedText, ownerEl)
     }
     const existing = hoverTarget._ccEntryMap.get(textNode);
     if (existing) {
-        existing.converted = convertedText; // rate changed — update without re-registering
+        // Rate or page price changed — update without re-registering.
+        existing.original  = originalText;
+        existing.converted = convertedText;
     } else {
         const entry = { textNode, original: originalText, converted: convertedText, owner: ownerEl };
         hoverTarget._ccEntries.push(entry);

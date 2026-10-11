@@ -19,9 +19,25 @@ const TOOLTIP_SELECTOR = '.jqplot-highlighter-tooltip, .jqplot-cursor-tooltip';
 // Evaluated once at script load — this never changes during a page's lifetime.
 const IS_IN_IFRAME = window !== window.top;
 
+// Parses a sell/buy input like "$1,234.56", "1.234,56€" or "S/.6.46".
+// The store symbol is removed first so separators inside it (PEN "S/.", RUB "руб.")
+// aren't read as part of the number. The last separator is the decimal point when
+// 1–2 digits follow it (also covers "12,5" mid-typing); all others are thousands.
 function parseInputAmount(val) {
-    const n = parseFloat(val.replace(/[^\d.,]/g, '').replace(',', '.'));
+    let s = val;
+    for (const sym of [FROM.symbol, FROM.altSymbol]) if (sym) s = s.split(sym).join('');
+    s = s.replace(/[^\d.,]/g, '');
+    const m = s.match(/^(.*)[.,](\d{1,2})$/);
+    const n = m
+        ? parseFloat((m[1].replace(/[.,]/g, '') || '0') + '.' + m[2])
+        : parseFloat(s.replace(/[.,]/g, ''));
     return isNaN(n) ? 0 : n;
+}
+
+// Writing textContent always fires a mutation, even when unchanged — and every
+// mutation schedules another observer pass. Only write when the text differs.
+function setText(el, text) {
+    if (el.textContent !== text) el.textContent = text;
 }
 
 // Converts the wallet balance elements and returns the original (unconverted) wallet text
@@ -36,13 +52,16 @@ function convertWalletBalances() {
         if (!el) continue;
         if (el.dataset.ccHovering) continue;
 
-        const original = el.dataset.ccOrig || el.textContent.trim();
+        // Reuse the stored original only while the element still shows our output;
+        // anything else is a fresh balance written by Steam (e.g. after a purchase).
+        const current  = el.textContent.trim();
+        const original = (el.dataset.ccOrig && current === el.dataset.ccConv) ? el.dataset.ccOrig : current;
         if (!PRICE_MATCH_REGEX.test(original)) continue;
 
         const converted = el.id === 'marketWalletBalanceAmount'
             ? withOriginal(original)
             : convertPriceText(original);
-        el.textContent = converted;
+        setText(el, converted);
 
         if (el.id === 'header_wallet_balance' && !el.dataset.ccHoverSetup && !strippingOnly && hoverOn) {
             el.dataset.ccHoverSetup = 'true';
@@ -65,26 +84,19 @@ function convertWalletBalances() {
 
         if (el.id === 'marketWalletBalanceAmount') {
             const walletLabel = document.getElementById('ext-wallet-display');
-            if (walletLabel) walletLabel.textContent = `Wallet Balance: ${withOriginal(original)}`;
+            if (walletLabel) setText(walletLabel, `Wallet Balance: ${withOriginal(original)}`);
         }
     }
     return walletOriginal;
 }
 
+// jqplot rewrites the tooltip on every mouse move. Running the regular walker on it
+// (instead of a separate replace pass) shares textState, so a tooltip node is never
+// converted twice — that used to compound for "$"-family targets (USD → A$, R$, ...).
 function convertGraphTooltips() {
     document.querySelectorAll(TOOLTIP_SELECTOR).forEach(tooltip => {
         if (tooltip.style.display === 'none') return;
-        PRICE_REGEX.lastIndex = 0;
-        if (!PRICE_REGEX.test(tooltip.textContent)) return;
-        const walker = document.createTreeWalker(tooltip, NodeFilter.SHOW_TEXT);
-        let node;
-        while ((node = walker.nextNode())) {
-            PRICE_REGEX.lastIndex = 0;
-            if (PRICE_REGEX.test(node.nodeValue)) {
-                PRICE_REGEX.lastIndex = 0;
-                node.nodeValue = node.nodeValue.replace(PRICE_REGEX, m => convertPriceText(m));
-            }
-        }
+        runOnRoot(tooltip);
     });
 }
 
@@ -123,8 +135,8 @@ function updateSellPreviews(walletOriginalText = '') {
     const r = document.getElementById('cc_receive_preview');
     const b = document.getElementById('cc_buyer_preview');
     const refresh = () => {
-        r.textContent = inputPreviewLabel(parseInputAmount(receiveInput.value) * rate);
-        b.textContent = inputPreviewLabel(parseInputAmount(buyerInput.value) * rate);
+        setText(r, inputPreviewLabel(parseInputAmount(receiveInput.value) * rate));
+        setText(b, inputPreviewLabel(parseInputAmount(buyerInput.value) * rate));
     };
 
     if (!receiveInput.dataset.ccListeners) {
@@ -177,7 +189,7 @@ function updateBuyPreviews() {
     // Element is guaranteed to exist here (created above or already present).
     const lbl = document.getElementById('cc_buy_price_preview');
     const refresh = () => {
-        lbl.textContent = toLabel(parseInputAmount(priceInput.value) * rate);
+        setText(lbl, toLabel(parseInputAmount(priceInput.value) * rate));
     };
 
     if (!priceInput.dataset.ccListeners) {

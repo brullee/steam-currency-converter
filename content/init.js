@@ -8,7 +8,6 @@ async function init() {
     const conversionOn    = stored.conversionEnabled !== false;
     hoverOn               = stored.hoverEnabled !== false;
     const applyFormatting = stored.applyFormatting || 'converted';
-    stripUsdTrail         = !!stored.stripTrailingCode;
 
     const targetCurrency = (stored.targetCurrency === 'ILS' || stored.targetCurrency === 'ISL') ? null : stored.targetCurrency;
     if (!targetCurrency) {
@@ -27,6 +26,10 @@ async function init() {
         console.log('[CurrencyConverter] No store currency set — configure it in the popup.');
         return;
     }
+
+    // The popup only offers "Remove USD trail" for a USD store, but the stored flag
+    // survives switching currency — ignore it for anything else.
+    stripUsdTrail = !!stored.stripTrailingCode && manualFrom === 'USD';
 
     FROM = CURRENCIES[manualFrom];
     ({ scan: PRICE_REGEX, match: PRICE_MATCH_REGEX } = buildRegexes(FROM, stripUsdTrail));
@@ -56,11 +59,12 @@ async function init() {
         return;
     }
 
+    if (manualFrom === CONFIG.to && !stripUsdTrail) return;   // nothing to do
+
     TO = buildToMeta(CONFIG.to);
     startObserver();
 
     if (manualFrom === CONFIG.to) {
-        if (!stripUsdTrail) return;
         strippingOnly = true;
         rate = 1;
         rateReady = true;

@@ -20,15 +20,12 @@ function runOnRoot(root) {
                 // This is the critical optimisation for wishlist performance: on every
                 // MutationObserver re-run the vast majority of nodes fall here and are
                 // rejected in O(1) without any regex work.
-                if (parent.dataset.ccOrig &&
-                    parent.dataset.ccRate === rateKey &&
-                    node.textContent === parent.dataset.ccConv) {
-                    return NodeFilter.FILTER_REJECT;
-                }
+                const st = textState.get(node);
+                if (st && st.rate === rateKey && node.textContent === st.conv) return NodeFilter.FILTER_REJECT;
                 // Accept nodes that contain FROM-currency prices or were already converted
                 // (but need re-converting because the rate changed).
                 PRICE_REGEX.lastIndex = 0;
-                if (!PRICE_REGEX.test(node.textContent) && !parent.dataset.ccOrig) return NodeFilter.FILTER_REJECT;
+                if (!PRICE_REGEX.test(node.textContent) && !st) return NodeFilter.FILTER_REJECT;
                 return NodeFilter.FILTER_ACCEPT;
             }
         }
@@ -37,34 +34,30 @@ function runOnRoot(root) {
     let node;
     while (node = walker.nextNode()) {
         const parent = node.parentElement;
-        // On re-runs, use the stored original to avoid compounding conversions.
-        // But if the current text still contains FROM.symbol, the page has updated the price
-        // since the last run (e.g. Steam applying a partial-bundle discount) — trust the
-        // fresh textContent and discard the stale ccOrig.
+        const st = textState.get(node);
+        // If the text is still our own output, re-convert from the stored original
+        // (rate changed) to avoid compounding. Anything else means the page wrote new
+        // content (e.g. Steam applying a partial-bundle discount) — trust it. Comparing
+        // against our output, not testing for FROM.symbol, matters when FROM's symbol is
+        // a substring of TO's (USD "$" inside AUD "A$"): converted text would otherwise
+        // look fresh and be re-converted on every tick.
         const currentText = node.textContent;
-        PRICE_REGEX.lastIndex = 0;
-        // hasFreshPrice is true only when FROM-currency prices appear and the current text
-        // is NOT our own previously-converted output. Without the ccConv guard, currencies
-        // whose symbol is a substring of the TO symbol (e.g. USD "$" inside AUD "A$") would
-        // match converted text and re-convert it on every MutationObserver tick — infinite loop.
-        const hasFreshPrice = PRICE_REGEX.test(currentText) && currentText !== parent.dataset.ccConv;
-        // Use stored original unless the page has replaced the price (hasFreshPrice = true),
-        // e.g. Steam updating a bundle discount after first render.
-        const original = (parent.dataset.ccOrig && !hasFreshPrice) ? parent.dataset.ccOrig : currentText;
+        const original = (st && currentText === st.conv) ? st.orig : currentText;
         PRICE_REGEX.lastIndex = 0;
         const converted = original.replace(PRICE_REGEX, m => convertPriceText(m));
-        if (converted === original) continue;
+        if (converted === original) {
+            textState.delete(node);
+            continue;
+        }
 
-        parent.dataset.ccOrig  = original;
-        parent.dataset.ccConv  = converted;
-        parent.dataset.ccRate  = rateKey;   // stamp the rate so re-runs skip this node
-        node.textContent = converted;
+        textState.set(node, { orig: original, conv: converted, rate: rateKey });
+        if (currentText !== converted) node.textContent = converted;
 
         if (!strippingOnly && hoverOn) {
             // Strip " USD" from the hover display when the user opted in;
-            // data-cc-orig always keeps the true original for re-run correctness.
+            // textState always keeps the true original for re-run correctness.
             const hoverOriginal = stripUsdTrail
-                ? original.replace(PRICE_REGEX, m => m.replace(/ USD$/, ''))
+                ? original.replace(PRICE_REGEX, m => m.replace(/\s+USD$/, ''))
                 : original;
             setupHover(findHoverTarget(parent), node, hoverOriginal, converted, parent);
         }
@@ -74,11 +67,20 @@ function runOnRoot(root) {
 function run() {
     if (!FROM || !rateReady) return;
     runOnRoot(document.body);
+    convertMarketElements();
+}
+
+// Wallet balances, buy/sell dialog previews and graph tooltips — elements the
+// text walker either skips (MANAGED_IDS) or that need extra handling.
+function convertMarketElements() {
     convertGraphTooltips();
     const walletOriginal = convertWalletBalances();
     updateSellPreviews(walletOriginal);
     updateBuyPreviews();
 }
+
+// Our own preview / wallet labels — never fed back into the walker.
+const isOwnElement = el => !!el?.id && (el.id.startsWith('cc_') || el.id.startsWith('ext-'));
 
 function startObserver() {
     // Pending subtree roots collected between debounce ticks.
@@ -88,44 +90,48 @@ function startObserver() {
     let debounceTimer;
 
     const flush = () => {
+        if (!FROM || !rateReady) { pendingRoots.clear(); return; }
         if (pendingRoots.size === 0) {
-            // Nothing specific queued — full-body walk (cheap: ccRate stamp skips converted nodes).
+            // Nothing specific queued — full-body walk (cheap: textState skips converted nodes).
             run();
         } else {
-            // Process only the subtrees that were actually added to the DOM.
-            pendingRoots.forEach(root => runOnRoot(root));
-            convertGraphTooltips();
-            const walletOriginal = convertWalletBalances();
-            updateSellPreviews(walletOriginal);
-            updateBuyPreviews();
+            // Process only the subtrees that actually changed.
+            pendingRoots.forEach(root => { if (root.isConnected) runOnRoot(root); });
+            convertMarketElements();
         }
         pendingRoots.clear();
     };
 
+    const elementOf = node => node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
+
     new MutationObserver(mutations => {
         // Fast path: all mutations are inside tooltip elements — only convert tooltips.
-        if (mutations.every(m =>
-            m.target.matches?.(TOOLTIP_SELECTOR) || m.target.closest?.(TOOLTIP_SELECTOR)
-        )) {
-            convertGraphTooltips();
+        // A characterData mutation targets the Text node itself, so resolve to its element.
+        if (mutations.every(m => elementOf(m.target)?.closest(TOOLTIP_SELECTOR))) {
+            if (rateReady) convertGraphTooltips();
             return;
         }
 
-        // Collect newly added element subtrees (e.g. wishlist items loading in on scroll).
-        // characterData mutations (including our own node.textContent writes) are ignored
-        // here — ccRate stamping means the walker rejects already-converted nodes in O(1),
-        // so the full-run fallback below is cheap even when Steam fires many text mutations.
+        // Collect the elements whose text changed: newly added subtrees (e.g. wishlist
+        // items loading in on scroll), elements whose children were replaced
+        // (el.textContent = ...), and text nodes edited in place. Our own writes land
+        // here too, but textState makes the walker reject them in O(1), so the loop
+        // settles after one extra pass instead of re-running forever.
+        let relevant = false;
         for (const m of mutations) {
-            if (m.type !== 'childList') continue;
+            const target = elementOf(m.target);
+            if (!target || isOwnElement(target)) continue;   // e.g. a preview label refresh
+            relevant = true;
+            if (m.type === 'characterData') {
+                pendingRoots.add(target);
+                continue;
+            }
             for (const added of m.addedNodes) {
-                if (added.nodeType === Node.ELEMENT_NODE) {
-                    // Don't reprocess our own injected previews / wallet labels.
-                    const id = added.id;
-                    if (id && (id.startsWith('cc_') || id.startsWith('ext-') || id === 'cc_buy_price_row')) continue;
-                    pendingRoots.add(added);
-                }
+                const el = added.nodeType === Node.ELEMENT_NODE ? added : target;
+                if (!isOwnElement(el)) pendingRoots.add(el);
             }
         }
+        if (!relevant) return;
 
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(flush, 100);

@@ -1,7 +1,6 @@
 // Builds display metadata for any ISO 4217 currency code.
 // Uses the hardcoded CURRENCIES entry when available (Steam-tested symbols),
 // otherwise derives symbol and position from the browser's Intl API.
-// Always adds: decimals (natural decimal places), localeDec, localeThou.
 function buildToMeta(code) {
     let meta;
     if (CURRENCIES[code]) {
@@ -15,14 +14,6 @@ function buildToMeta(code) {
         } catch {
             meta = { symbol: code, position: 'after', numberFormat: undefined };
         }
-    }
-    try {
-        const parts     = new Intl.NumberFormat(meta.numberFormat ?? 'en-US').formatToParts(1000.1);
-        meta.localeDec  = parts.find(p => p.type === 'decimal')?.value ?? '.';
-        meta.localeThou = parts.find(p => p.type === 'group')?.value   ?? ',';
-    } catch {
-        meta.localeDec  = '.';
-        meta.localeThou = ',';
     }
     return meta;
 }
@@ -39,12 +30,15 @@ function buildRegexes(currency, stripTrailing = false) {
     // trailing-code group from being blocked by a greedy space match.
     // requireDecimal: use a lazy quantifier that forces a [.,]NN ending, so
     // bare "R18" (age ratings) can't match ZAR's single-char symbol.
+    // The number must end in a digit so trailing punctuation ("$5." / "₩ 3,030,")
+    // stays in the text instead of being swallowed by the conversion.
     const numPart = currency.requireDecimal
         ? `((?:[\\d.,\\u00A0]|\\s(?=[\\d.,\\u00A0]))+?[.,]\\d{2})`
-        : `((?:[\\d.,\\u00A0]|\\s(?=[\\d.,\\u00A0]))+)`;
-    // Only consume the trailing ISO code (e.g. " USD") when the user has opted in.
+        : `((?:[\\d.,\\u00A0]|\\s(?=[\\d.,\\u00A0]))*\\d)`;
+    // Only consume the trailing " USD" when the user has opted in. The lookahead
+    // stops it from eating the start of a longer word (e.g. "USDT").
     // When off, " USD" stays in the text node so it remains visible after conversion.
-    const trailingCode = stripTrailing ? `(?:\\s+[A-Z]{2,4})?` : '';
+    const trailingCode = stripTrailing ? `(?:\\s+USD(?![A-Za-z]))?` : '';
     const core = currency.position === 'before'
         ? `${sym}\\s*${signPart}${numPart}${trailingCode}`
         : `${signPart}${numPart}\\s*${sym}${trailingCode}`;
@@ -55,33 +49,40 @@ function buildRegexes(currency, stripTrailing = false) {
 }
 
 function formatAmount(value, showDecimals = true) {
-    // Always start from the locale-formatted string so currency-specific grouping
-    // (UAH space, VND period, INR lakh groups, etc.) is preserved by default.
+    // Format via parts so separators are swapped by role, never by searching the
+    // string — a replaced group separator can't be mistaken for the decimal later.
+    // Starting from the locale keeps currency-specific grouping (UAH space, VND period,
+    // INR lakh groups, etc.) by default.
     const places = showDecimals ? 2 : 0;
-    let result = value.toLocaleString(TO.numberFormat, { minimumFractionDigits: places, maximumFractionDigits: places });
-
-    // Replace thousands separator only where the user has overridden it.
-    // Split-join replaces all group characters at once.
-    if (CONFIG.thousandsSep && TO.localeThou) {
-        const replacement = CONFIG.thousandsSep === 'none' ? '' : CONFIG.thousandsSep;
-        result = result.split(TO.localeThou).join(replacement);
+    let parts;
+    try {
+        parts = new Intl.NumberFormat(TO.numberFormat, { minimumFractionDigits: places, maximumFractionDigits: places }).formatToParts(value);
+    } catch {
+        parts = new Intl.NumberFormat('en-US', { minimumFractionDigits: places, maximumFractionDigits: places }).formatToParts(value);
     }
 
-    // Replace decimal separator only where the user has overridden it.
-    // lastIndexOf targets the decimal position (always rightmost separator).
-    if (CONFIG.decimalSep && TO.localeDec) {
-        const idx = result.lastIndexOf(TO.localeDec);
-        if (idx !== -1) result = result.slice(0, idx) + CONFIG.decimalSep + result.slice(idx + TO.localeDec.length);
+    const localeDec  = parts.find(p => p.type === 'decimal')?.value;
+    const localeThou = parts.find(p => p.type === 'group')?.value;
+    let dec = CONFIG.decimalSep || localeDec;
+    let grp = CONFIG.thousandsSep === 'none' ? '' : (CONFIG.thousandsSep || localeThou);
+    // One override can collide with the other separator's locale default
+    // (e.g. EUR with thousands set to "," → "1,234,56"). The explicit choice wins
+    // and the defaulted one flips to the other symbol.
+    if (grp && grp === dec) {
+        const other = grp === ',' ? '.' : ',';
+        if (CONFIG.decimalSep) grp = other; else dec = other;
     }
 
-    // Optionally strip the decimal part when it's .00 (or locale equivalent).
-    // Only relevant when showDecimals is true — 0-place format already has no decimal.
-    if (showDecimals && CONFIG.hideZeroDecimals) {
-        const dec = CONFIG.decimalSep || TO.localeDec || '.';
-        if (result.endsWith(`${dec}00`)) result = result.slice(0, -(dec.length + 2));
-    }
+    // Optionally drop the decimal part when it's all zeros.
+    const fraction = parts.find(p => p.type === 'fraction')?.value;
+    const hideFraction = showDecimals && CONFIG.hideZeroDecimals && fraction && /^0+$/.test(fraction);
 
-    return result;
+    return parts.map(p => {
+        if (p.type === 'group')   return grp;
+        if (p.type === 'decimal') return hideFraction ? '' : dec;
+        if (p.type === 'fraction') return hideFraction ? '' : p.value;
+        return p.value;
+    }).join('');
 }
 
 // "₪1.23" or "1.23₪" — plain converted price, no currency code prefix.

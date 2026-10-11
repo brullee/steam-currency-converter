@@ -37,7 +37,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         toDropdown.hidden = false;
     };
 
+    // A typo like "EUE" would get no rate from the API, so reject it up front.
+    const supported = typeof Intl.supportedValuesOf === 'function' ? new Set(Intl.supportedValuesOf('currency')) : null;
+    const isKnownCurrency = code =>
+        /^[A-Z]{3}$/.test(code) && (!!CURRENCIES[code] || !supported || supported.has(code));
+
     toCurrencyInput.addEventListener('input', () => {
+        toCurrencyInput.setCustomValidity('');
         const q = toCurrencyInput.value.trim().toUpperCase();
         if (!q) { toDropdown.hidden = true; return; }
         const matches = allCurrencies
@@ -153,8 +159,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         const fromCode          = fromCurrencySelect.value || null;
         const conversionEnabled = conversionToggle.checked;
         const hoverEnabled      = document.getElementById('hover-enabled').checked;
-        const stripTrailingCode = document.getElementById('strip-trailing').checked;
+        // The checkbox is hidden for non-USD stores; don't persist a stale tick.
+        const stripTrailingCode = document.getElementById('strip-trailing').checked && fromCode === 'USD';
         if (!toCode || !fromCode) return;
+        toCurrencyInput.setCustomValidity('');
+        if (!isKnownCurrency(toCode)) {
+            toCurrencyInput.setCustomValidity(`"${toCode}" is not a recognised currency code.`);
+            toCurrencyInput.reportValidity();
+            return;
+        }
         saveAndRefresh({ targetCurrency: toCode, fromCurrency: fromCode, conversionEnabled, hoverEnabled, stripTrailingCode });
     });
 
