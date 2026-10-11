@@ -26,14 +26,31 @@ function buildChromeExtension() {
     return dir;
 }
 
+// Google Chrome (not Helium/Chromium) keeps "Default/Account Web Data" locked after it
+// exits — no chrome.exe is left running, and plain ACLs allow the delete — so each run
+// leaves an ~11 MB profile behind. Sweep whatever has been released since (at the latest
+// after a reboot).
+function removeStaleTempDirs() {
+    for (const name of fs.readdirSync(os.tmpdir())) {
+        if (!/^scc-(ext|profile)-/.test(name)) continue;
+        try { fs.rmSync(path.join(os.tmpdir(), name), { recursive: true, force: true }); } catch { /* still in use */ }
+    }
+}
+
 async function launch() {
+    removeStaleTempDirs();
     const executablePath = process.env.BROWSER_PATH || BROWSERS[process.env.BROWSER || 'chrome'];
     if (!executablePath || !fs.existsSync(executablePath)) {
         throw new Error(`Browser not found at ${executablePath} — set BROWSER_PATH (or BROWSER=chrome|helium)`);
     }
     const extDir = buildChromeExtension();
+    // Our own profile dir: Puppeteer deletes the temp profile it creates on close, and on
+    // Windows that fails with EPERM while Chrome still holds files in it. A dir we pass in
+    // is left alone, and we remove it ourselves with retries.
+    const profileDir = fs.mkdtempSync(path.join(os.tmpdir(), 'scc-profile-'));
     const browser = await puppeteer.launch({
         executablePath,
+        userDataDir: profileDir,
         headless: !process.env.HEADED,
         enableExtensions: true,
         // GitHub's Ubuntu runners block the unprivileged user namespaces Chrome's sandbox
@@ -44,6 +61,12 @@ async function launch() {
     const swTarget = await browser.waitForTarget(
         t => t.type() === 'service_worker' && t.url().startsWith(`chrome-extension://${extensionId}/`));
     const worker = await swTarget.worker();
+    // The worker target can appear a moment before Chrome injects the extension APIs into
+    // it ("chrome is not defined" on the first configure()) — wait until they're there.
+    for (let i = 0; i < 50; i++) {
+        if (await worker.evaluate(() => typeof chrome !== 'undefined' && !!chrome.storage?.sync).catch(() => false)) break;
+        await new Promise(r => setTimeout(r, 100));
+    }
 
     // Replace extension storage. `rates` seeds the background's daily cache so no
     // network request is made, e.g. { 'USD_EUR': 0.5 }.
@@ -91,7 +114,10 @@ async function launch() {
 
     async function close() {
         await browser.close();
-        fs.rmSync(extDir, { recursive: true, force: true });
+        for (const dir of [extDir, profileDir]) {
+            try { fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 }); }
+            catch { /* Chrome still releasing a file — a leftover temp dir isn't worth a failed run */ }
+        }
     }
 
     return { browser, extensionId, worker, configure, storage, openSteam, close };
