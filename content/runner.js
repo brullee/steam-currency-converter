@@ -54,12 +54,9 @@ function runOnRoot(root) {
         if (currentText !== converted) node.textContent = converted;
 
         if (!strippingOnly && hoverOn) {
-            // Strip " USD" from the hover display when the user opted in;
-            // textState always keeps the true original for re-run correctness.
-            const hoverOriginal = stripUsdTrail
-                ? original.replace(PRICE_REGEX, m => m.replace(/\s+USD$/, ''))
-                : original;
-            setupHover(findHoverTarget(parent), node, hoverOriginal, converted, parent);
+            // Hover shows Steam's price in the "original" formatting set; textState
+            // always keeps the true original for re-run correctness.
+            setupHover(findHoverTarget(parent), node, formatOriginalText(original), converted, parent);
         }
     }
 }

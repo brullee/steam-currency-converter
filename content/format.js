@@ -48,7 +48,8 @@ function buildRegexes(currency, stripTrailing = false) {
     };
 }
 
-function formatAmount(value, showDecimals = true) {
+// meta/config default to the converted price's; the original-price path passes FROM's.
+function formatAmount(value, showDecimals = true, meta = TO, config = CONFIG) {
     // Format via parts so separators are swapped by role, never by searching the
     // string — a replaced group separator can't be mistaken for the decimal later.
     // Starting from the locale keeps currency-specific grouping (UAH space, VND period,
@@ -56,26 +57,26 @@ function formatAmount(value, showDecimals = true) {
     const places = showDecimals ? 2 : 0;
     let parts;
     try {
-        parts = new Intl.NumberFormat(TO.numberFormat, { minimumFractionDigits: places, maximumFractionDigits: places }).formatToParts(value);
+        parts = new Intl.NumberFormat(meta.numberFormat, { minimumFractionDigits: places, maximumFractionDigits: places }).formatToParts(value);
     } catch {
         parts = new Intl.NumberFormat('en-US', { minimumFractionDigits: places, maximumFractionDigits: places }).formatToParts(value);
     }
 
     const localeDec  = parts.find(p => p.type === 'decimal')?.value;
     const localeThou = parts.find(p => p.type === 'group')?.value;
-    let dec = CONFIG.decimalSep || localeDec;
-    let grp = CONFIG.thousandsSep === 'none' ? '' : (CONFIG.thousandsSep || localeThou);
+    let dec = config.decimalSep || localeDec;
+    let grp = config.thousandsSep === 'none' ? '' : (config.thousandsSep || localeThou);
     // One override can collide with the other separator's locale default
     // (e.g. EUR with thousands set to "," → "1,234,56"). The explicit choice wins
     // and the defaulted one flips to the other symbol.
     if (grp && grp === dec) {
         const other = grp === ',' ? '.' : ',';
-        if (CONFIG.decimalSep) grp = other; else dec = other;
+        if (config.decimalSep) grp = other; else dec = other;
     }
 
     // Optionally drop the decimal part when it's all zeros.
     const fraction = parts.find(p => p.type === 'fraction')?.value;
-    const hideFraction = showDecimals && CONFIG.hideZeroDecimals && fraction && /^0+$/.test(fraction);
+    const hideFraction = showDecimals && config.hideZeroDecimals && fraction && /^0+$/.test(fraction);
 
     return parts.map(p => {
         if (p.type === 'group')   return grp;
@@ -87,11 +88,11 @@ function formatAmount(value, showDecimals = true) {
 
 // "₪1.23" or "1.23₪" — plain converted price, no currency code prefix.
 // srcHasDecimal: whether the source price text had a decimal part (e.g. "63,50" → true, "15" → false).
-function toLabel(amount, srcHasDecimal = true) {
-    const n   = formatAmount(amount, srcHasDecimal);
-    const sym = CONFIG.customSymbol   || TO.symbol;
-    const pos = CONFIG.symbolPosition || TO.position;
-    const sp  = CONFIG.symbolSpace ? ' ' : '';
+function toLabel(amount, srcHasDecimal = true, meta = TO, config = CONFIG) {
+    const n   = formatAmount(amount, srcHasDecimal, meta, config);
+    const sym = config.customSymbol   || meta.symbol;
+    const pos = config.symbolPosition || meta.position;
+    const sp  = config.symbolSpace ? ' ' : '';
     return pos === 'before' ? `${sym}${sp}${n}` : `${n}${sp}${sym}`;
 }
 
@@ -100,7 +101,7 @@ const inputPreviewLabel = amt => `Conversion: ${toLabel(amt)}`;
 
 // "₪1.23 (₴100)" — converted price followed by original in parens.
 function withOriginal(priceText) {
-    return `${convertPriceText(priceText)} (${priceText})`;
+    return `${convertPriceText(priceText)} (${formatOriginalText(priceText)})`;
 }
 
 // Steam prices always have exactly 2 decimal digits when a decimal exists (e.g. $3.99, 2.64€).
@@ -123,4 +124,24 @@ function convertPriceText(text) {
     // (e.g. "59 UAH") is irrelevant to whether the converted JOD/USD value needs them.
     const srcHasDecimal = !strippingOnly || /[,.](\d{2})$/.test(m[3].replace(/[\s\u00A0]/g, ''));
     return `${m[1]}${m[2]}${toLabel(n * rate, srcHasDecimal)}`;
+}
+
+// One of Steam's own prices restyled with the "original" formatting set — the same
+// currency, so no rate, and decimals kept the way Steam showed them.
+function formatOriginalPrice(text) {
+    const m = text.match(PRICE_MATCH_REGEX);
+    if (!m) return text;
+    const n = parsePrice(m[3]);
+    if (isNaN(n)) return text;
+    const srcHasDecimal = /[,.](\d{2})$/.test(m[3].replace(/[\s\u00A0]/g, ''));
+    return `${m[1]}${m[2]}${toLabel(n, srcHasDecimal, FROM_META, ORIGINAL_CONFIG)}`;
+}
+
+// Steam's original text as shown on hover and in "(original)" labels. With an untouched
+// original set it stays exactly as Steam wrote it (rebuilding it would change spacing,
+// e.g. "CDN$ 3.56" → "CDN$3.56"), apart from the optional " USD" removal.
+function formatOriginalText(text) {
+    PRICE_REGEX.lastIndex = 0;
+    if (hasFormatting(ORIGINAL_CONFIG)) return text.replace(PRICE_REGEX, m => formatOriginalPrice(m));
+    return stripUsdTrail ? text.replace(PRICE_REGEX, m => m.replace(/\s+USD$/, '')) : text;
 }

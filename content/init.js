@@ -1,7 +1,6 @@
 const SETTINGS_KEYS = [
-    'targetCurrency', 'fromCurrency', 'conversionEnabled',
-    'hoverEnabled', 'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
-    'decimalSep', 'thousandsSep', 'hideZeroDecimals',
+    'targetCurrency', 'fromCurrency', 'conversionEnabled', 'hoverEnabled', 'stripTrailingCode',
+    'formatting', ...LEGACY_FORMAT_KEYS,
 ];
 
 // ILS/ISL are disabled on purpose, as both store and target currency.
@@ -15,8 +14,8 @@ let settingsGeneration = 0;
 // Has no side effects, so the page keeps its current state until the new rate is known
 // (no flash of unconverted prices while it loads).
 async function planConversion(stored) {
-    const conversionOn    = stored.conversionEnabled !== false;
-    const applyFormatting = stored.applyFormatting || 'converted';
+    const conversionOn = stored.conversionEnabled !== false;
+    const formatting   = readFormatting(stored);
 
     const to = isBlockedCurrency(stored.targetCurrency) ? null : stored.targetCurrency;
     if (!to) {
@@ -35,22 +34,17 @@ async function planConversion(stored) {
     // survives switching currency — ignore it for anything else.
     const strip = !!stored.stripTrailingCode && from === 'USD';
 
-    // Custom formatting only applies to the mode it was set for.
-    const applyOnStrip = applyFormatting === 'unconverted';
-    const shouldFormat = conversionOn ? applyFormatting === 'converted' : applyOnStrip;
-    const config = {
-        customSymbol:     shouldFormat ? stored.customSymbol   || '' : '',
-        symbolPosition:   shouldFormat ? stored.symbolPosition || '' : '',
-        symbolSpace:      shouldFormat && !!stored.symbolSpace,
-        decimalSep:       shouldFormat ? stored.decimalSep     || '' : '',
-        thousandsSep:     shouldFormat ? stored.thousandsSep   || '' : '',
-        hideZeroDecimals: shouldFormat && !!stored.hideZeroDecimals,
+    // Converted prices use the "converted" set. With conversion off, the prices on the
+    // page are Steam's own, so they get the "original" set — the same one hover uses.
+    const plan = {
+        from, to, strip,
+        config:   conversionOn ? formatting.converted : formatting.original,
+        original: formatting.original,
+        hover:    stored.hoverEnabled !== false,
     };
 
-    const plan = { from, to, strip, config, hover: stored.hoverEnabled !== false };
-
     if (!conversionOn) {
-        if (!strip && !applyOnStrip) {
+        if (!strip && !hasFormatting(formatting.original)) {
             console.log('[CurrencyConverter] Conversion is disabled.');
             return null;
         }
@@ -72,6 +66,8 @@ function commitPlan(plan) {
     Object.assign(CONFIG, plan.config);
     FROM = CURRENCIES[plan.from];
     TO   = buildToMeta(plan.to);
+    FROM_META       = buildToMeta(plan.from);
+    ORIGINAL_CONFIG = plan.original;
     stripUsdTrail = plan.strip;
     ({ scan: PRICE_REGEX, match: PRICE_MATCH_REGEX } = buildRegexes(FROM, stripUsdTrail));
     hoverOn       = plan.hover;

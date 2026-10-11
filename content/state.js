@@ -10,6 +10,11 @@ const CONFIG = {
 
 let FROM, PRICE_REGEX, PRICE_MATCH_REGEX, TO;
 
+// Formatting for Steam's own prices (hover, wallet "(original)", conversion off),
+// and FROM's display metadata to rebuild them with. Set in commitPlan().
+let ORIGINAL_CONFIG = { ...FORMAT_DEFAULTS };
+let FROM_META;
+
 // True when FROM === TO and we're only stripping trailing codes — hover is suppressed
 // because the "original" and "converted" values are the same currency.
 let strippingOnly = false;

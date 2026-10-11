@@ -70,7 +70,7 @@ function convertWalletBalances() {
             el.addEventListener('mouseenter', () => {
                 if (!el.dataset.ccConv || !hoverOn || strippingOnly) return;
                 el.dataset.ccHovering = 'true';
-                el.textContent = el.dataset.ccOrig;
+                el.textContent = formatOriginalText(el.dataset.ccOrig);
             });
             el.addEventListener('mouseleave', () => {
                 if (!el.dataset.ccHovering) return;

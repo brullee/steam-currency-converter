@@ -146,16 +146,73 @@ test('settings changed while hovering leave nothing stuck', async () => {
     assert.equal(p.text('price'), '$10.00');
 });
 
-test('formatting settings apply live', async () => {
-    const p = loadContent('<div id="p">$1,234.00</div>', USD_EUR, rates);
+const fmt = (converted = {}, original = {}) => ({ formatting: { converted, original } });
+
+test('converted formatting applies live, and only to converted prices', async () => {
+    const p = loadContent('<a href="#" id="card"><div id="p">$1,234.00</div></a>', USD_EUR, rates);
     await sleep(SETTLE);
     assert.equal(p.text('p'), '617,00€');
-    await p.setSettings({ customSymbol: 'EUR', symbolPosition: 'before', symbolSpace: true, hideZeroDecimals: true });
+    await p.setSettings(fmt({ customSymbol: 'EUR', symbolPosition: 'before', symbolSpace: true, hideZeroDecimals: true }));
     await sleep(SETTLE);
     assert.equal(p.text('p'), 'EUR 617');
-    await p.setSettings({ applyFormatting: 'unconverted' });   // formatting now only for the off mode
+    p.document.getElementById('card').dispatchEvent(new p.window.MouseEvent('mouseenter'));
+    assert.equal(p.text('p'), '$1,234.00', 'hover original must not use the converted set');
+});
+
+test('original formatting styles the hover price', async () => {
+    const p = loadContent('<a href="#" id="card"><div id="p">$1,234.00</div></a>',
+        { ...USD_EUR, ...fmt({}, { customSymbol: 'US$', symbolSpace: true, thousandsSep: ' ' }) }, rates);
     await sleep(SETTLE);
-    assert.equal(p.text('p'), '617,00€');
+    const card = p.document.getElementById('card');
+    assert.equal(p.text('p'), '617,00€', 'converted price untouched by the original set');
+    card.dispatchEvent(new p.window.MouseEvent('mouseenter'));
+    assert.equal(p.text('p'), 'US$ 1 234.00');
+    card.dispatchEvent(new p.window.MouseEvent('mouseleave'));
+    // Changing the original set re-renders hover text without a reload.
+    await p.setSettings(fmt({}, { hideZeroDecimals: true }));
+    await sleep(SETTLE);
+    card.dispatchEvent(new p.window.MouseEvent('mouseenter'));
+    assert.equal(p.text('p'), '$1,234');
+});
+
+test('original formatting styles wallet "(original)" text and the header wallet hover', async () => {
+    const p = loadContent('<span id="marketWalletBalanceAmount">$20.00</span><a id="header_wallet_balance">$20.00</a>',
+        { ...USD_EUR, ...fmt({}, { customSymbol: 'US$', symbolSpace: true }) }, rates);
+    await sleep(SETTLE);
+    assert.equal(p.text('marketWalletBalanceAmount'), '10,00€ (US$ 20.00)');
+    const header = p.document.getElementById('header_wallet_balance');
+    header.dispatchEvent(new p.window.MouseEvent('mouseenter'));
+    assert.equal(header.textContent, 'US$ 20.00');
+    header.dispatchEvent(new p.window.MouseEvent('mouseleave'));
+    assert.equal(header.textContent, '10,00€');
+});
+
+test('with an untouched original set, hover shows Steam\'s text exactly', async () => {
+    const p = loadContent('<a href="#" id="card"><div id="p">CDN$ 3.56</div></a>',
+        { fromCurrency: 'CAD', targetCurrency: 'USD' }, () => ({ rate: 0.75 }));
+    await sleep(SETTLE);
+    p.document.getElementById('card').dispatchEvent(new p.window.MouseEvent('mouseenter'));
+    assert.equal(p.text('p'), 'CDN$ 3.56', 'rebuilding the label would drop the space');
+});
+
+test('conversion off uses the original set; an empty original set leaves the page alone', async () => {
+    const p = loadContent('<div id="p">$1,234.00</div>',
+        { ...USD_EUR, conversionEnabled: false, ...fmt({ customSymbol: 'EUR' }, { hideZeroDecimals: true }) }, rates);
+    await sleep(SETTLE);
+    assert.equal(p.text('p'), '$1,234');
+    await p.setSettings(fmt({ customSymbol: 'EUR' }, {}));
+    await sleep(SETTLE);
+    assert.equal(p.text('p'), '$1,234.00');
+});
+
+test('settings saved before 1.2 (one flat set + applyFormatting) still apply', async () => {
+    const conv = loadContent('<div id="p">$1,234.00</div>',
+        { ...USD_EUR, customSymbol: 'EUR', symbolPosition: 'before', symbolSpace: true }, rates);
+    const off = loadContent('<div id="p">$1,234.00</div>',
+        { ...USD_EUR, conversionEnabled: false, hideZeroDecimals: true, applyFormatting: 'unconverted' }, rates);
+    await sleep(SETTLE);
+    assert.equal(conv.text('p'), 'EUR 617,00');
+    assert.equal(off.text('p'), '$1,234');
 });
 
 test('"Remove USD trail" toggles live', async () => {
