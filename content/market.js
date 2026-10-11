@@ -63,13 +63,17 @@ function convertWalletBalances() {
             : convertPriceText(original);
         setText(el, converted);
 
-        if (el.id === 'header_wallet_balance' && !el.dataset.ccHoverSetup && !strippingOnly && hoverOn) {
+        // Attached once per page; the settings can change afterwards, so the handlers
+        // check them on every hover instead of at setup.
+        if (el.id === 'header_wallet_balance' && !el.dataset.ccHoverSetup) {
             el.dataset.ccHoverSetup = 'true';
             el.addEventListener('mouseenter', () => {
+                if (!el.dataset.ccConv || !hoverOn || strippingOnly) return;
                 el.dataset.ccHovering = 'true';
                 el.textContent = el.dataset.ccOrig;
             });
             el.addEventListener('mouseleave', () => {
+                if (!el.dataset.ccHovering) return;
                 delete el.dataset.ccHovering;
                 el.textContent = el.dataset.ccConv;
             });
@@ -131,22 +135,26 @@ function updateSellPreviews(walletOriginalText = '') {
         }
     }
 
-    // Elements are guaranteed to exist here (created above or already present).
-    const r = document.getElementById('cc_receive_preview');
-    const b = document.getElementById('cc_buyer_preview');
-    const refresh = () => {
-        setText(r, inputPreviewLabel(parseInputAmount(receiveInput.value) * rate));
-        setText(b, inputPreviewLabel(parseInputAmount(buyerInput.value) * rate));
-    };
-
     if (!receiveInput.dataset.ccListeners) {
         receiveInput.dataset.ccListeners = 'true';
         ['input', 'change'].forEach(ev => {
-            receiveInput.addEventListener(ev, refresh);
-            buyerInput.addEventListener(ev, refresh);
+            receiveInput.addEventListener(ev, refreshSellPreviews);
+            buyerInput.addEventListener(ev, refreshSellPreviews);
         });
     }
-    refresh();
+    refreshSellPreviews();
+}
+
+// Looks everything up on each call: the listeners outlive a settings change, which
+// removes the preview labels and may stop conversion altogether.
+function refreshSellPreviews() {
+    const receiveInput = document.getElementById('market_sell_currency_input');
+    const buyerInput   = document.getElementById('market_sell_buyercurrency_input');
+    const r = document.getElementById('cc_receive_preview');
+    const b = document.getElementById('cc_buyer_preview');
+    if (!rateReady || !receiveInput || !buyerInput || !r || !b) return;
+    setText(r, inputPreviewLabel(parseInputAmount(receiveInput.value) * rate));
+    setText(b, inputPreviewLabel(parseInputAmount(buyerInput.value) * rate));
 }
 
 function updateBuyPreviews() {
@@ -157,6 +165,8 @@ function updateBuyPreviews() {
             totalDiv.textContent = convertPriceText(text);
             totalDiv.appendChild(document.createElement('br'));
             totalDiv.appendChild(document.createTextNode(`(${text})`));
+            totalDiv.dataset.ccOrig = text;
+            totalDiv.dataset.ccConv = totalDiv.textContent;
         }
     }
 
@@ -186,17 +196,11 @@ function updateBuyPreviews() {
         if (priceRow) priceRow.before(row);
     }
 
-    // Element is guaranteed to exist here (created above or already present).
-    const lbl = document.getElementById('cc_buy_price_preview');
-    const refresh = () => {
-        setText(lbl, toLabel(parseInputAmount(priceInput.value) * rate));
-    };
-
     if (!priceInput.dataset.ccListeners) {
         priceInput.dataset.ccListeners = 'true';
-        ['input', 'change'].forEach(ev => priceInput.addEventListener(ev, refresh));
+        ['input', 'change'].forEach(ev => priceInput.addEventListener(ev, refreshBuyPreview));
     }
-    refresh();
+    refreshBuyPreview();
 
     const amountSpan = document.getElementById('market_buyorder_dialog_walletbalance_amount');
     if (amountSpan && PRICE_MATCH_REGEX.test(amountSpan.textContent.trim())) {
@@ -206,9 +210,55 @@ function updateBuyPreviews() {
             const newSpan = document.createElement('span');
             newSpan.id = 'market_buyorder_dialog_walletbalance_amount';
             newSpan.textContent = formatted;
+            newSpan.dataset.ccOrig = amountSpan.textContent.trim();
             walletSpan.textContent = '';
             walletSpan.appendChild(newSpan);
+        } else {
+            amountSpan.dataset.ccOrig = amountSpan.textContent.trim();
+            amountSpan.textContent = formatted;
         }
-        else amountSpan.textContent = formatted;
     }
+}
+
+// Same reasoning as refreshSellPreviews: the listener outlives settings changes.
+function refreshBuyPreview() {
+    const priceInput = document.getElementById('market_buy_commodity_input_price');
+    const lbl = document.getElementById('cc_buy_price_preview');
+    if (!rateReady || !priceInput || !lbl) return;
+    setText(lbl, toLabel(parseInputAmount(priceInput.value) * rate));
+}
+
+// Undoes everything this file writes, so new settings start from Steam's own page:
+// original wallet texts and buy totals back, our preview labels and wallet row removed.
+function restoreMarketElements() {
+    for (const id of ['marketWalletBalanceAmount', 'header_wallet_balance']) {
+        const el = document.getElementById(id);
+        if (!el?.dataset.ccConv) continue;
+        if (el.dataset.ccHovering || el.textContent.trim() === el.dataset.ccConv) el.textContent = el.dataset.ccOrig;
+        delete el.dataset.ccOrig;
+        delete el.dataset.ccConv;
+        delete el.dataset.ccHovering;
+    }
+
+    const totalDiv = document.getElementById('market_buy_commodity_order_total');
+    if (totalDiv?.dataset.ccOrig) {
+        if (totalDiv.textContent === totalDiv.dataset.ccConv) totalDiv.textContent = totalDiv.dataset.ccOrig;
+        delete totalDiv.dataset.ccOrig;
+        delete totalDiv.dataset.ccConv;
+    }
+
+    const amountSpan = document.getElementById('market_buyorder_dialog_walletbalance_amount');
+    if (amountSpan?.dataset.ccOrig) {
+        amountSpan.textContent = amountSpan.dataset.ccOrig;
+        delete amountSpan.dataset.ccOrig;
+    }
+
+    for (const id of ['cc_receive_preview', 'cc_buyer_preview', 'cc_buy_price_row']) {
+        document.getElementById(id)?.remove();
+    }
+    // The wallet row wraps Steam's zoom controls — put them back where they were.
+    document.querySelectorAll('.ext-wallet-row').forEach(row => {
+        const zoom = row.querySelector('.pricehistory_zoom_controls');
+        if (zoom) row.replaceWith(zoom); else row.remove();
+    });
 }

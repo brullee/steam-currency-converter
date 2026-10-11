@@ -1,5 +1,5 @@
 const CONFIG = {
-    to: 'USD',       // overridden by stored.targetCurrency in init()
+    to: 'USD',       // set from the stored targetCurrency in commitPlan()
     customSymbol:   '',
     symbolPosition: '', // '' = use TO.position default
     symbolSpace:    false,

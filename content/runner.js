@@ -79,10 +79,32 @@ function convertMarketElements() {
     updateBuyPreviews();
 }
 
+// Puts the page back the way Steam rendered it, so new settings convert from the
+// originals instead of from text converted under the old settings.
+function resetPage() {
+    rateReady = false;   // stops the observer and preview listeners until the next commit
+    resetHover();        // first: clears ccHovering, which would hide nodes from the walk below
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+    let node;
+    while (node = walker.nextNode()) {
+        const st = textState.get(node);
+        if (!st) continue;
+        // Anything other than our output (e.g. the original shown by hover) stays as is.
+        if (node.textContent === st.conv) node.textContent = st.orig;
+        textState.delete(node);
+    }
+    restoreMarketElements();
+}
+
 // Our own preview / wallet labels — never fed back into the walker.
 const isOwnElement = el => !!el?.id && (el.id.startsWith('cc_') || el.id.startsWith('ext-'));
 
+// Settings can be applied many times per page, but one observer is enough.
+let observing = false;
+
 function startObserver() {
+    if (observing) return;
+    observing = true;
     // Pending subtree roots collected between debounce ticks.
     // When the wishlist lazy-loads items we process only those new subtrees
     // instead of re-walking the entire body.
@@ -105,6 +127,9 @@ function startObserver() {
     const elementOf = node => node.nodeType === Node.ELEMENT_NODE ? node : node.parentElement;
 
     new MutationObserver(mutations => {
+        // Conversion is off or waiting on a rate — nothing to queue. The next commit
+        // runs a full pass anyway, so mutations skipped here aren't lost.
+        if (!rateReady) return;
         // Fast path: all mutations are inside tooltip elements — only convert tooltips.
         // A characterData mutation targets the Text node itself, so resolve to its element.
         if (mutations.every(m => elementOf(m.target)?.closest(TOOLTIP_SELECTOR))) {

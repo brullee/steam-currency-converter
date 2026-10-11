@@ -16,9 +16,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 /**
  * @param {string} html            body HTML
- * @param {object} storage         chrome.storage.sync contents
- * @param {object|'throw'} rateResponse  what the background replies to fetchRate
- * @param {{init?: boolean, iframe?: boolean}} opts  init:false skips init() for unit tests
+ * @param {object} storage         initial chrome.storage.sync contents
+ * @param {object|'throw'|function} rateResponse  what the background replies to a
+ *        fetchRate message; a function receives the message ({ from, to }) and returns it
+ * @param {{init?: boolean, iframe?: boolean}} opts  init:false skips init.js for unit tests
  */
 function loadContent(html, storage = {}, rateResponse = { rate: 0.5 }, { init = true, iframe = false } = {}) {
     const dom = new JSDOM(`<!doctype html><html><body>${html}</body></html>`, {
@@ -26,14 +27,39 @@ function loadContent(html, storage = {}, rateResponse = { rate: 0.5 }, { init = 
     });
     const w = dom.window;
     w.console = { log() {}, warn() {}, error() {} };
+    // In-memory sync storage that fires onChanged like the real one, so tests can
+    // change settings the way the popup does and watch the page follow.
+    const sync = { ...storage };
+    const changeListeners = [];
     w.chrome = {
-        storage: { sync: { get: async () => ({ ...storage }) } },
+        storage: {
+            sync: {
+                get: async () => ({ ...sync }),
+                set: async items => {
+                    const changes = {};
+                    for (const [k, v] of Object.entries(items)) {
+                        if (sync[k] !== v) changes[k] = { oldValue: sync[k], newValue: v };
+                        sync[k] = v;
+                    }
+                    if (Object.keys(changes).length) changeListeners.forEach(fn => fn(changes, 'sync'));
+                },
+            },
+            onChanged: { addListener: fn => changeListeners.push(fn) },
+        },
         runtime: {
-            sendMessage: async () => {
+            sendMessage: async msg => {
                 if (rateResponse === 'throw') throw new Error('service worker unavailable');
-                return rateResponse;
+                return typeof rateResponse === 'function' ? rateResponse(msg) : rateResponse;
             },
         },
+    };
+
+    // Count observers: a second one doubles the work on every page change without
+    // changing any text, so nothing else would notice.
+    let observers = 0;
+    const NativeObserver = w.MutationObserver;
+    w.MutationObserver = class extends NativeObserver {
+        constructor(cb) { super(cb); observers++; }
     };
 
     const ctx = dom.getInternalVMContext();
@@ -50,6 +76,9 @@ function loadContent(html, storage = {}, rateResponse = { rate: 0.5 }, { init = 
         /** Evaluate an expression inside the content-script scope. */
         evaluate: run,
         runCount: () => run('__runs'),
+        observerCount: () => observers,
+        /** Change settings like the popup does (fires storage.onChanged). */
+        setSettings: items => w.chrome.storage.sync.set(items),
         text: id => w.document.getElementById(id).textContent,
     };
 }

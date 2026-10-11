@@ -54,6 +54,7 @@ function setupHover(hoverTarget, textNode, originalText, convertedText, ownerEl)
     if (!hoverTarget._ccEntries) {
         hoverTarget._ccEntries = [];
         hoverTarget._ccEntryMap = new WeakMap();
+        hoverTargets.add(hoverTarget);
         hoverTarget.addEventListener('mouseenter', () => {
             hoverTarget._ccEntries.forEach(e => {
                 e.owner.dataset.ccHovering = 'true';
@@ -76,5 +77,21 @@ function setupHover(hoverTarget, textNode, originalText, convertedText, ownerEl)
         const entry = { textNode, original: originalText, converted: convertedText, owner: ownerEl };
         hoverTarget._ccEntries.push(entry);
         hoverTarget._ccEntryMap.set(textNode, entry);
+    }
+}
+
+// Every element that ever got hover listeners, so a settings change can empty them.
+// The listeners stay attached (they can't be removed without keeping the handler
+// references) — with no entries they do nothing.
+const hoverTargets = new Set();
+
+// Drops all hover entries and clears any "currently hovering" flag, which would
+// otherwise make the walker skip those nodes forever after the settings change.
+function resetHover() {
+    for (const target of hoverTargets) {
+        target._ccEntries.forEach(e => delete e.owner.dataset.ccHovering);
+        target._ccEntries = [];
+        target._ccEntryMap = new WeakMap();
+        if (!target.isConnected) hoverTargets.delete(target);
     }
 }

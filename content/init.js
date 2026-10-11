@@ -1,79 +1,101 @@
-async function init() {
-    const stored = await chrome.storage.sync.get([
-        'targetCurrency', 'fromCurrency', 'conversionEnabled',
-        'hoverEnabled', 'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
-        'decimalSep', 'thousandsSep', 'hideZeroDecimals',
-    ]);
+const SETTINGS_KEYS = [
+    'targetCurrency', 'fromCurrency', 'conversionEnabled',
+    'hoverEnabled', 'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
+    'decimalSep', 'thousandsSep', 'hideZeroDecimals',
+];
 
+// ILS/ISL are disabled on purpose, as both store and target currency.
+const isBlockedCurrency = code => code === 'ILS' || code === 'ISL';
+
+// Bumped on every settings load. A slower, older load — e.g. a rate request still in
+// flight while the user keeps changing the popup — sees the mismatch and drops its result.
+let settingsGeneration = 0;
+
+// Turns the stored settings into what to apply, or null when there's nothing to convert.
+// Has no side effects, so the page keeps its current state until the new rate is known
+// (no flash of unconverted prices while it loads).
+async function planConversion(stored) {
     const conversionOn    = stored.conversionEnabled !== false;
-    hoverOn               = stored.hoverEnabled !== false;
     const applyFormatting = stored.applyFormatting || 'converted';
 
-    const targetCurrency = (stored.targetCurrency === 'ILS' || stored.targetCurrency === 'ISL') ? null : stored.targetCurrency;
-    if (!targetCurrency) {
+    const to = isBlockedCurrency(stored.targetCurrency) ? null : stored.targetCurrency;
+    if (!to) {
         console.log('[CurrencyConverter] No target currency set — configure it in the popup.');
-        return;
+        return null;
     }
-    CONFIG.to = targetCurrency;
 
-    const applyOnConvert = applyFormatting === 'converted';
-    const applyOnStrip   = applyFormatting === 'unconverted';
-
-    const manualFrom = stored.fromCurrency && stored.fromCurrency !== 'ILS' && stored.fromCurrency !== 'ISL' && CURRENCIES[stored.fromCurrency]
+    const from = stored.fromCurrency && !isBlockedCurrency(stored.fromCurrency) && CURRENCIES[stored.fromCurrency]
         ? stored.fromCurrency : null;
-
-    if (!manualFrom) {
+    if (!from) {
         console.log('[CurrencyConverter] No store currency set — configure it in the popup.');
-        return;
+        return null;
     }
 
     // The popup only offers "Remove USD trail" for a USD store, but the stored flag
     // survives switching currency — ignore it for anything else.
-    stripUsdTrail = !!stored.stripTrailingCode && manualFrom === 'USD';
+    const strip = !!stored.stripTrailingCode && from === 'USD';
 
-    FROM = CURRENCIES[manualFrom];
-    ({ scan: PRICE_REGEX, match: PRICE_MATCH_REGEX } = buildRegexes(FROM, stripUsdTrail));
+    // Custom formatting only applies to the mode it was set for.
+    const applyOnStrip = applyFormatting === 'unconverted';
+    const shouldFormat = conversionOn ? applyFormatting === 'converted' : applyOnStrip;
+    const config = {
+        customSymbol:     shouldFormat ? stored.customSymbol   || '' : '',
+        symbolPosition:   shouldFormat ? stored.symbolPosition || '' : '',
+        symbolSpace:      shouldFormat && !!stored.symbolSpace,
+        decimalSep:       shouldFormat ? stored.decimalSep     || '' : '',
+        thousandsSep:     shouldFormat ? stored.thousandsSep   || '' : '',
+        hideZeroDecimals: shouldFormat && !!stored.hideZeroDecimals,
+    };
 
-    // Load custom formatting when it applies to the current mode.
-    const shouldFormat = conversionOn ? applyOnConvert : applyOnStrip;
-    if (shouldFormat) {
-        CONFIG.customSymbol     = stored.customSymbol   || '';
-        CONFIG.symbolPosition   = stored.symbolPosition || '';
-        CONFIG.symbolSpace      = !!stored.symbolSpace;
-        CONFIG.decimalSep       = stored.decimalSep     || '';
-        CONFIG.thousandsSep     = stored.thousandsSep   || '';
-        CONFIG.hideZeroDecimals = !!stored.hideZeroDecimals;
-    }
+    const plan = { from, to, strip, config, hover: stored.hoverEnabled !== false };
 
     if (!conversionOn) {
-        if (!stripUsdTrail && !applyOnStrip) {
+        if (!strip && !applyOnStrip) {
             console.log('[CurrencyConverter] Conversion is disabled.');
-            return;
+            return null;
         }
-        TO = buildToMeta(manualFrom);
-        startObserver();
-        strippingOnly = true;
-        rate = 1;
-        rateReady = true;
-        run();
-        return;
+        return { ...plan, to: from, rate: 1, strippingOnly: true };
     }
+    if (from === to) return strip ? { ...plan, rate: 1, strippingOnly: true } : null;
 
-    if (manualFrom === CONFIG.to && !stripUsdTrail) return;   // nothing to do
-
-    TO = buildToMeta(CONFIG.to);
-    startObserver();
-
-    if (manualFrom === CONFIG.to) {
-        strippingOnly = true;
-        rate = 1;
-        rateReady = true;
-        run();
-        return;
-    }
-
-    console.log(`[CurrencyConverter] FROM: ${manualFrom} → TO: ${CONFIG.to}`);
-    fetchRate(manualFrom, CONFIG.to);
+    const r = await requestRate(from, to);
+    return r === null ? null : { ...plan, rate: r, strippingOnly: false };
 }
 
-init();
+// Swaps the page over to a plan in one synchronous step: undo the old conversion,
+// set the new state, convert again.
+function commitPlan(plan) {
+    resetPage();
+    if (!plan) return;
+
+    CONFIG.to = plan.to;
+    Object.assign(CONFIG, plan.config);
+    FROM = CURRENCIES[plan.from];
+    TO   = buildToMeta(plan.to);
+    stripUsdTrail = plan.strip;
+    ({ scan: PRICE_REGEX, match: PRICE_MATCH_REGEX } = buildRegexes(FROM, stripUsdTrail));
+    hoverOn       = plan.hover;
+    strippingOnly = plan.strippingOnly;
+    rate          = plan.rate;
+    rateReady     = true;
+
+    console.log(`[CurrencyConverter] FROM: ${plan.from} → TO: ${plan.to}`);
+    startObserver();
+    run();
+}
+
+async function applySettings() {
+    const gen = ++settingsGeneration;
+    const stored = await chrome.storage.sync.get(SETTINGS_KEYS);
+    if (gen !== settingsGeneration) return;
+    const plan = await planConversion(stored);
+    if (gen !== settingsGeneration) return;
+    commitPlan(plan);
+}
+
+// The popup saves every change as it's made; open Steam tabs follow along without a reload.
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'sync' && SETTINGS_KEYS.some(k => k in changes)) applySettings();
+});
+
+applySettings();

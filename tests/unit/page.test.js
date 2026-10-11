@@ -1,4 +1,4 @@
-// Whole content-script behaviour on a jsdom page: init → fetchRate → run → observer.
+// Whole content-script behaviour on a jsdom page: applySettings → requestRate → run → observer.
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const { loadContent, sleep } = require('../helpers/load-content');

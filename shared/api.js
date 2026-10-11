@@ -1,11 +1,13 @@
-// Shared rate — set by fetchRate() before run() is ever called. Conversion never
-// starts (rateReady stays false) if no valid rate is available.
+// Shared rate — set when settings are committed (init.js), before run() is ever called.
+// Conversion never starts (rateReady stays false) if no valid rate is available.
 let rate = 1;
 
-// Guards against the MutationObserver firing run() before a real rate is available.
+// Guards against the MutationObserver firing run() before a real rate is available,
+// and is cleared while a settings change is being applied.
 let rateReady = false;
 
-async function fetchRate(from, to) {
+// Asks the background for the from→to rate. Returns null when there's no usable rate.
+async function requestRate(from, to) {
     let response;
     try {
         response = await chrome.runtime.sendMessage({ type: 'fetchRate', from, to });
@@ -25,11 +27,8 @@ async function fetchRate(from, to) {
     const r = response?.rate;
     if (!(typeof r === 'number' && Number.isFinite(r) && r > 0)) {
         console.warn(`[CurrencyConverter] No rate available for ${from}→${to}; prices left unconverted.`);
-        return;
+        return null;
     }
-
-    rate = r;
-    console.log(`[CurrencyConverter] ${from}→${to} rate: ${rate}`);
-    rateReady = true;
-    run();
+    console.log(`[CurrencyConverter] ${from}→${to} rate: ${r}`);
+    return r;
 }
