@@ -40,12 +40,11 @@
 
             <label class="checkbox-label">
                 <input type="checkbox" id="strip-trailing">
-                Remove USD trail
+                Hide "USD" after prices
                 <span class="tooltip-icon">?</span>
             </label>
         </div>
 
-        <button id="save">Save &amp; Refresh page</button>
         <button class="link-btn" id="more-btn">More settings</button>
     </div>
 
@@ -60,19 +59,17 @@
             </button>
         </div>
 
-        <p class="section-heading">Behaviour</p>
-
-        <label>Apply settings when</label>
-        <div class="radio-row">
-            <label class="radio-label"><input type="radio" name="apply-to" value="converted">Converted</label>
-            <label class="radio-label"><input type="radio" name="apply-to" value="unconverted">Unconverted</label>
+        <label>Formatting for</label>
+        <div class="segmented" role="radiogroup" aria-label="Which prices to format">
+            <label><input type="radio" name="format-set" value="converted"><span id="format-set-converted">Converted</span></label>
+            <label><input type="radio" name="format-set" value="original"><span id="format-set-original">Store currency</span></label>
         </div>
 
         <hr class="settings-divider">
         <p class="section-heading">Symbol</p>
 
-        <label for="custom-symbol">Currency symbol</label>
-        <input id="custom-symbol" placeholder="Leave blank for default" autocomplete="off" spellcheck="false">
+        <label for="custom-symbol">Currency symbol / text</label>
+        <input id="custom-symbol" placeholder="e.g. JD (blank = default)" autocomplete="off" spellcheck="false">
 
         <label>Position</label>
         <div class="radio-row">
@@ -92,7 +89,7 @@
         <label for="thou-sep">Thousands separator</label>
         <div class="select-wrapper">
             <select id="thou-sep">
-                <option value="">Default</option>
+                <option value="">Unchanged</option>
                 <option value=".">Period (.)</option>
                 <option value=",">Comma (,)</option>
                 <option value=" ">Space ( )</option>
@@ -100,11 +97,13 @@
             </select>
         </div>
 
-        <label>Decimal separator</label>
-        <div class="radio-row">
-            <label class="radio-label"><input type="radio" name="dec-sep" value="">Default</label>
-            <label class="radio-label"><input type="radio" name="dec-sep" value=".">Period</label>
-            <label class="radio-label"><input type="radio" name="dec-sep" value=",">Comma</label>
+        <label for="dec-sep">Decimal separator</label>
+        <div class="select-wrapper">
+            <select id="dec-sep">
+                <option value="">Unchanged</option>
+                <option value=".">Period (.)</option>
+                <option value=",">Comma (,)</option>
+            </select>
         </div>
 
         <label class="checkbox-label">
@@ -112,12 +111,24 @@
             Hide decimals when zero (.00)
         </label>
 
+    </div>
 
-
-        <button id="save-more">Save &amp; Refresh page</button>
+    <div class="save-indicator" role="status" aria-live="polite">
+        <svg class="floppy" width="18" height="18" viewBox="0 0 16 16" aria-hidden="true">
+            <!-- The shutter and label are cut out of the disk, so the popup shows through. -->
+            <mask id="floppy-holes">
+                <rect width="16" height="16" fill="#fff"/>
+                <rect x="4.5" y="1" width="6" height="4.2" rx=".4" fill="#000"/>
+                <rect x="4" y="8.5" width="8" height="5.5" rx=".5" fill="#000"/>
+            </mask>
+            <path class="floppy-body" mask="url(#floppy-holes)" d="M2.5 1h8.9L15 4.6V14.5a.5.5 0 0 1-.5.5h-12a.5.5 0 0 1-.5-.5v-13a.5.5 0 0 1 .5-.5z"/>
+            <rect class="floppy-body" x="8.2" y="1.8" width="1.4" height="2.6"/>
+        </svg>
+        <span class="save-text">Saved</span>
     </div>
 
     <script src="../shared/currencies.js"></script>
+    <script src="../shared/settings.js"></script>
     <script src="popup.js"></script>
 </body>
 </html>

@@ -1,7 +1,7 @@
-// End-to-end: the packed Chrome extension running in a real Chromium (Helium).
+// End-to-end: the packed Chrome extension running in real Chrome.
 // Pages are fixtures served on real Steam URLs; exchange rates are seeded into the
 // background's cache so runs are deterministic and offline.
-const { test, before, after } = require('node:test');
+const { test, before, after, afterEach } = require('node:test');
 const assert = require('node:assert/strict');
 const { launch } = require('./browser');
 
@@ -9,11 +9,19 @@ const STORE  = 'https://store.steampowered.com';
 const MARKET = 'https://steamcommunity.com';
 const USD_EUR = { fromCurrency: 'USD', targetCurrency: 'EUR' };
 
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
 let b;
 before(async () => { b = await launch(); });
+// Close every tab between tests: a popup left open by a failed test would save its
+// stale values when it loses focus and leak them into the next test.
+// A close can hang on a page that's already going away, so each one gets a time limit.
+afterEach(async () => {
+    const pages = await b.browser.pages();
+    await Promise.all(pages.slice(1).map(p => Promise.race([p.close().catch(() => {}), sleep(2000)])));
+});
 after(async () => { await b?.close(); });
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 const text = (page, sel) => page.$eval(sel, el => el.textContent);
 
 // Wait until `sel` has `expected` text; on timeout, fail with the actual text.
@@ -162,34 +170,159 @@ test('"Remove USD trail" keeps unrelated words', async () => {
     await page.close();
 });
 
-test('popup: rejects an unknown target currency', async () => {
-    await b.configure({});
+const openPopup = async () => {
     const page = await b.browser.newPage();
     await page.goto(`chrome-extension://${b.extensionId}/popup/popup.html`);
-    await page.type('#to-currency', 'EUE');
+    return page;
+};
+
+// Wait until chrome.storage.sync satisfies `check`; on timeout, fail showing what was saved.
+async function expectStorage(check, timeout = 3000) {
+    const end = Date.now() + timeout;
+    let saved;
+    while (Date.now() < end) {
+        saved = await b.storage();
+        if (check(saved)) return saved;
+        await sleep(100);
+    }
+    assert.fail(`storage never matched; saved: ${JSON.stringify(saved)}`);
+}
+
+test('popup: has no Save button, and an unknown target currency is never saved', async () => {
+    await b.configure({});
+    const page = await openPopup();
+    assert.equal(await page.$('#save'), null);
+    assert.equal(await page.$('#save-more'), null);
     await page.select('#from-currency', 'USD');
-    await page.click('#save');
-    await sleep(300);
-    const msg = await page.$eval('#to-currency', el => el.validationMessage);
-    assert.match(msg, /not a recognised currency/);
-    assert.deepEqual(await b.storage(), {});
+    await page.type('#to-currency', 'EUE');
+    await page.keyboard.press('Tab');   // leaving the field reports the problem
+    await sleep(600);
+    assert.match(await page.$eval('#to-currency', el => el.validationMessage), /not a recognised currency/);
+    const saved = await b.storage();
+    assert.equal(saved.fromCurrency, 'USD');
+    assert.equal(saved.targetCurrency, undefined);
     await page.close();
 });
 
-test('popup: saves a valid target and drops the USD-trail flag for non-USD stores', async () => {
+test('popup: every change saves itself; USD-trail flag dropped for non-USD stores', async () => {
     await b.configure({ fromCurrency: 'USD', targetCurrency: 'EUR', stripTrailingCode: true });
-    const page = await b.browser.newPage();
-    await page.goto(`chrome-extension://${b.extensionId}/popup/popup.html`);
+    const page = await openPopup();
     await page.waitForFunction(() => document.querySelector('#to-currency').value === 'EUR');
     assert.equal(await page.$eval('#strip-trailing', el => el.checked), true);
+    const indicatorShown = () => page.$eval('.save-indicator', el => el.classList.contains('visible'));
+    assert.equal(await indicatorShown(), false, 'save indicator showing before any change');
+
     await page.select('#from-currency', 'GBP');
+    await page.waitForFunction(() => document.querySelector('.save-indicator').classList.contains('visible'), { timeout: 2000 });
+    assert.equal(await page.$eval('.save-text', el => el.textContent), 'Saved');
+    await page.waitForFunction(() => !document.querySelector('.save-indicator').classList.contains('visible'), { timeout: 3000 });
+    await expectStorage(s => s.fromCurrency === 'GBP' && s.stripTrailingCode === false);
+
     await page.$eval('#to-currency', el => { el.value = ''; });
-    await page.type('#to-currency', 'jod');
-    page.click('#save').catch(() => {});   // the popup reloads/closes itself after saving
-    await sleep(1000);
-    const saved = await b.storage();
-    assert.equal(saved.targetCurrency, 'JOD');
-    assert.equal(saved.fromCurrency, 'GBP');
-    assert.equal(saved.stripTrailingCode, false);
-    if (!page.isClosed()) await page.close().catch(() => {});
+    await page.type('#to-currency', 'jod');   // a complete code saves without leaving the field
+    await expectStorage(s => s.targetCurrency === 'JOD');
+
+    await page.click('#hover-enabled');
+    await expectStorage(s => s.hoverEnabled === false);
+
+    await page.click('#more-btn');
+    const conv = s => s.formatting?.converted ?? {};
+    const orig = s => s.formatting?.original ?? {};
+    await page.type('#custom-symbol', 'JD');
+    await expectStorage(s => conv(s).customSymbol === 'JD');
+    await page.select('#dec-sep', ',');
+    await expectStorage(s => conv(s).decimalSep === ',');
+    await page.select('#thou-sep', '.');
+    await expectStorage(s => conv(s).thousandsSep === '.' && conv(s).decimalSep === ',');
+    // "," is the decimal, so it can't also be picked as thousands separator.
+    assert.equal(await page.$eval('#thou-sep option[value=","]', o => o.disabled), true);
+    await page.close();
+});
+
+test('popup: Converted and Original formatting are separate sets', async () => {
+    // Pre-1.2 layout: one flat set, marked as being for unconverted prices.
+    await b.configure({ fromCurrency: 'USD', targetCurrency: 'EUR', customSymbol: 'US$', applyFormatting: 'unconverted' });
+    const page = await openPopup();
+    await page.waitForFunction(() => document.querySelector('#to-currency').value === 'EUR');
+    await page.click('#more-btn');
+
+    // Opens on the set in use (conversion is on → Converted), which the old layout left empty.
+    assert.equal(await page.$eval('input[name="format-set"]:checked', r => r.value), 'converted');
+    assert.equal(await page.$eval('#custom-symbol', el => el.value), '');
+
+    await page.click('.segmented label:nth-child(2)');   // Original
+    assert.equal(await page.$eval('#custom-symbol', el => el.value), 'US$');
+    await sleep(500);
+    assert.equal((await b.storage()).formatting, undefined, 'switching sets alone saved something');
+
+    await page.click('#hide-zero-decimals');
+    const saved = await expectStorage(s => s.formatting?.original?.hideZeroDecimals === true);
+    assert.equal(saved.formatting.original.customSymbol, 'US$');
+    assert.equal(saved.formatting.converted.hideZeroDecimals, false);
+    assert.equal(saved.customSymbol, undefined, 'old flat keys left behind');
+    assert.equal(saved.applyFormatting, undefined, 'old flat keys left behind');
+
+    await page.click('.segmented label:nth-child(1)');   // back to Converted
+    assert.equal(await page.$eval('#hide-zero-decimals', el => el.checked), false);
+    await page.close();
+});
+
+test('live: popup changes update an open Steam tab without reloading it', async () => {
+    await b.configure(USD_EUR, { USD_EUR: 0.5, USD_GBP: 0.25 });
+    const steam = await b.openSteam(`${STORE}/app/30/`, {
+        '/app/30/': `
+            <a href="#" id="card" style="display:block;padding:20px"><div id="p">$10.00</div></a>
+            <div id="away" style="height:100px"></div>
+            <a id="header_wallet_balance">$20.00</a>`,
+    });
+    await expectText(steam, '#p', '5,00€');
+    await steam.evaluate(() => { window.__notReloaded = true; });
+
+    const popup = await openPopup();
+    await popup.waitForFunction(() => document.querySelector('#to-currency').value === 'EUR');
+    await popup.$eval('#to-currency', el => { el.value = ''; });
+    await popup.type('#to-currency', 'GBP');
+    await expectText(steam, '#p', '£2.50');
+    await expectText(steam, '#header_wallet_balance', '£5.00');
+
+    await popup.click('label.toggle');                   // off (the checkbox itself is visually hidden)
+    await expectText(steam, '#p', '$10.00');
+    await expectText(steam, '#header_wallet_balance', '$20.00');
+
+    await popup.click('label.toggle');                   // back on
+    await expectText(steam, '#p', '£2.50');
+
+    await popup.click('#hover-enabled');                 // hover off
+    await sleep(500);
+    await steam.bringToFront();
+    await steam.hover('#p');
+    assert.equal(await text(steam, '#p'), '£2.50');
+    await steam.hover('#away');
+
+    await popup.bringToFront();
+    await popup.click('#more-btn');
+    await popup.type('#custom-symbol', 'GBP');
+    await popup.click('input[name="sym-pos"][value="before"]');
+    await popup.click('#sym-space');
+    await expectText(steam, '#p', 'GBP 2.50');
+
+    assert.equal(await steam.evaluate(() => window.__notReloaded), true, 'the Steam tab was reloaded');
+    await popup.close();
+    await steam.close();
+});
+
+test('live: a tab opened before the extension was configured starts converting', async () => {
+    await b.configure({}, { USD_EUR: 0.5 });
+    const steam = await b.openSteam(`${STORE}/app/40/`, { '/app/40/': '<div id="p">$10.00</div><div id="list"></div>' });
+    await sleep(500);
+    assert.equal(await text(steam, '#p'), '$10.00');
+
+    const popup = await openPopup();
+    await popup.select('#from-currency', 'USD');
+    await popup.type('#to-currency', 'EUR');
+    await expectText(steam, '#p', '5,00€');
+    await steam.evaluate(() => { document.querySelector('#list').innerHTML = '<span id="n">$4.00</span>'; });
+    await expectText(steam, '#n', '2,00€');
+    await popup.close();
+    await steam.close();
 });

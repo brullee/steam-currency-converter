@@ -10,6 +10,10 @@
     --color-toggle-checked: #1a4f7a;
     --color-btn-top:        #4d8ab5;
     --color-btn-bottom:     #356a94;
+    /* Save indicator: the same green the extension uses for converted prices
+       (content/style.css), and a muted red for a failed save */
+    --color-saved:          #85bb65;
+    --color-error:          #d9534f;
 }
 
 * {
@@ -97,6 +101,60 @@ h1 {
 }
 
 [hidden] { display: none !important; }
+
+/* Two-option switch in the popup's own colours: the chosen side looks like the
+   popup's buttons, the other sits back in the toggle's dark track colour. */
+.segmented {
+    display: flex;
+    margin-bottom: 16px;
+    border: 1px solid var(--color-border);
+    border-radius: 3px;
+    background: var(--color-toggle-bg);
+    overflow: hidden;
+}
+
+.segmented label {
+    flex: 1;
+    margin: 0;
+    cursor: pointer;
+}
+
+.segmented label + label {
+    border-left: 1px solid var(--color-border);
+}
+
+.segmented input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.segmented span {
+    display: block;
+    padding: 7px 0;
+    text-align: center;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--color-text-muted);
+    transition: color 0.12s ease-out;
+}
+
+.segmented label:hover span {
+    color: var(--color-text);
+}
+
+.segmented input:checked + span {
+    background: linear-gradient(to bottom, var(--color-btn-top), var(--color-btn-bottom));
+    color: var(--color-white);
+}
+
+.segmented input:focus-visible + span {
+    outline: 1px solid var(--color-accent);
+    outline-offset: -2px;
+}
 
 /* Dim individual fields when they are unavailable */
 .field-dimmed {
@@ -232,8 +290,10 @@ select {
 
 .tooltip-icon::after {
     content: "Hides the trailing 'USD' some regions append to prices (e.g. $9.99 USD → $9.99).";
+    /* Opens upward: hanging below the last row, the hidden box made Chrome size the
+       popup to fit it, leaving an empty strip at the bottom whenever it showed (USD). */
     position: absolute;
-    top: calc(100% + 6px);
+    bottom: calc(100% + 6px);
     left: 0;
     right: 0;
     padding: 6px 8px;
@@ -382,4 +442,72 @@ button:active {
 #to-currency-dropdown li:hover,
 #to-currency-dropdown li[aria-selected="true"] {
     background: var(--color-toggle-checked);
+}
+
+/* A little breathing room under the last checkbox; the page otherwise ends right at
+   the body padding, which feels cramped after a long list. */
+#page-more {
+    padding-bottom: 8px;
+}
+
+.save-indicator {
+    /* A small floppy disk in the bottom-right corner that flashes after each save.
+       Fixed-positioned so it takes no layout space; clicks pass through it. */
+    position: fixed;
+    right: 10px;
+    bottom: 10px;
+    pointer-events: none;
+    z-index: 20;
+    opacity: 0;
+    color: var(--color-saved);
+}
+
+.floppy {
+    display: block;
+    filter: drop-shadow(0 0 3px rgba(133, 187, 101, 0.35));
+}
+
+.floppy-body {
+    fill: currentColor;
+}
+
+.save-indicator.visible {
+    animation: save-flash 1.2s ease-out;
+}
+
+.save-indicator.error {
+    color: var(--color-error);
+}
+
+.save-indicator.error .floppy {
+    filter: drop-shadow(0 0 3px rgba(217, 83, 79, 0.35));
+}
+
+.save-indicator.error.visible {
+    animation-duration: 2.4s;
+}
+
+@keyframes save-flash {
+    0%   { opacity: 0; transform: scale(0.7); }
+    12%  { opacity: 1; transform: scale(1.15); }
+    24%  { opacity: 1; transform: scale(1); }
+    70%  { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+/* Screen-reader text for the status; the icon says it visually. */
+.save-text {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    @keyframes save-flash {
+        0%, 70% { opacity: 1; }
+        100%    { opacity: 0; }
+    }
 }

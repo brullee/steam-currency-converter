@@ -31,6 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 e.preventDefault(); // keep focus on input
                 toCurrencyInput.value = code;
                 toDropdown.hidden = true;
+                save();
             });
             toDropdown.appendChild(li);
         });
@@ -45,6 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     toCurrencyInput.addEventListener('input', () => {
         toCurrencyInput.setCustomValidity('');
         const q = toCurrencyInput.value.trim().toUpperCase();
+        // A complete, known code takes effect as soon as it's typed.
+        if (isKnownCurrency(q)) scheduleSave();
         if (!q) { toDropdown.hidden = true; return; }
         const matches = allCurrencies
             .filter(({ code, label }) => code.startsWith(q) || label.toUpperCase().includes(q))
@@ -65,6 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             e.preventDefault();
             toCurrencyInput.value = items[activeIdx].dataset.code;
             toDropdown.hidden = true;
+            save();
             return;
         } else if (e.key === 'Escape') {
             toDropdown.hidden = true;
@@ -80,49 +84,72 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Load saved settings
     const stored = await chrome.storage.sync.get([
-        'targetCurrency', 'fromCurrency', 'conversionEnabled',
-        'hoverEnabled', 'stripTrailingCode', 'customSymbol', 'symbolPosition', 'symbolSpace', 'applyFormatting',
-        'decimalSep', 'thousandsSep', 'hideZeroDecimals',
+        'targetCurrency', 'fromCurrency', 'conversionEnabled', 'hoverEnabled', 'stripTrailingCode',
+        'formatting', ...LEGACY_FORMAT_KEYS,
     ]);
     toCurrencyInput.value    = (stored.targetCurrency === 'ILS' || stored.targetCurrency === 'ISL') ? '' : (stored.targetCurrency || '');
     fromCurrencySelect.value = (stored.fromCurrency   === 'ILS' || stored.fromCurrency   === 'ISL') ? '' : (stored.fromCurrency   || '');
     conversionToggle.checked = stored.conversionEnabled !== false;
     document.getElementById('hover-enabled').checked   = stored.hoverEnabled !== false;
     document.getElementById('strip-trailing').checked  = !!stored.stripTrailingCode;
-    document.getElementById('custom-symbol').value     = stored.customSymbol || '';
-    document.getElementById('sym-space').checked       = !!stored.symbolSpace;
-    const applyToVal = stored.applyFormatting || 'converted';
-    const applyToEl  = document.querySelector(`input[name="apply-to"][value="${applyToVal}"]`);
-    if (applyToEl) applyToEl.checked = true;
-    const posValue = stored.symbolPosition || '';
-    document.querySelector(`input[name="sym-pos"][value="${posValue}"]`).checked = true;
-    const decSepEl = document.querySelector(`input[name="dec-sep"][value="${stored.decimalSep || ''}"]`);
-    if (decSepEl) decSepEl.checked = true;
-    document.getElementById('thou-sep').value = stored.thousandsSep || '';
-    document.getElementById('hide-zero-decimals').checked = !!stored.hideZeroDecimals;
 
     // Separator mutual exclusion: whichever symbol is chosen for one, disable it in the other
+    const decSelect  = document.getElementById('dec-sep');
     const thouSelect = document.getElementById('thou-sep');
-    const onDecChange = () => {
-        const decVal = document.querySelector('input[name="dec-sep"]:checked')?.value || '';
-        thouSelect.querySelectorAll('option').forEach(opt => {
-            const conflict = !!(decVal && opt.value === decVal);
-            if (conflict && thouSelect.value === opt.value) thouSelect.value = '';
+    const blockConflicts = (chosen, other) => {
+        other.querySelectorAll('option').forEach(opt => {
+            const conflict = !!(chosen.value && opt.value === chosen.value);
+            if (conflict && other.value === opt.value) other.value = '';
             opt.disabled = conflict;
         });
     };
-    const onThouChange = () => {
-        const thouVal = thouSelect.value;
-        document.querySelectorAll('input[name="dec-sep"]').forEach(r => {
-            const conflict = !!(thouVal && r.value === thouVal);
-            if (conflict && r.checked) document.querySelector('input[name="dec-sep"][value=""]').checked = true;
-            r.disabled = conflict;
-        });
+    decSelect.addEventListener('change', () => blockConflicts(decSelect, thouSelect));
+    thouSelect.addEventListener('change', () => blockConflicts(thouSelect, decSelect));
+
+    // Two formatting sets, Converted and Original; the More settings fields show one at a
+    // time. Opens on the set that's in use right now (Original when conversion is off).
+    const formatting  = readFormatting(stored);
+    // Each side is named after its currency ("JOD prices" / "UAH prices") so it's clear
+    // which prices it styles. The converted side falls back to "Converted" while there's no
+    // valid target yet, or when the target is the store currency itself.
+    const syncFormatSetLabels = () => {
+        const from = fromCurrencySelect.value;
+        const to   = toCurrencyInput.value.trim().toUpperCase();
+        document.getElementById('format-set-converted').textContent =
+            isKnownCurrency(to) && to !== from ? `${to} prices` : 'Converted';
+        document.getElementById('format-set-original').textContent =
+            from ? `${from} prices` : 'Store currency';
     };
-    document.querySelectorAll('input[name="dec-sep"]').forEach(r => r.addEventListener('change', onDecChange));
-    thouSelect.addEventListener('change', onThouChange);
-    onDecChange();
-    onThouChange();
+    syncFormatSetLabels();
+    fromCurrencySelect.addEventListener('change', syncFormatSetLabels);
+    toCurrencyInput.addEventListener('input', syncFormatSetLabels);
+    let editingSet = conversionToggle.checked ? 'converted' : 'original';
+
+    const showFormatSet = name => {
+        const set = formatting[name];
+        document.getElementById('custom-symbol').value = set.customSymbol;
+        document.querySelector(`input[name="sym-pos"][value="${set.symbolPosition}"]`).checked = true;
+        document.getElementById('sym-space').checked = set.symbolSpace;
+        decSelect.value  = set.decimalSep;
+        thouSelect.value = set.thousandsSep;
+        document.getElementById('hide-zero-decimals').checked = set.hideZeroDecimals;
+        blockConflicts(decSelect, thouSelect);
+        blockConflicts(thouSelect, decSelect);
+        document.querySelector(`input[name="format-set"][value="${name}"]`).checked = true;
+    };
+    const readFormatSet = () => ({
+        customSymbol:     document.getElementById('custom-symbol').value.trim(),
+        symbolPosition:   document.querySelector('input[name="sym-pos"]:checked')?.value || '',
+        symbolSpace:      document.getElementById('sym-space').checked,
+        decimalSep:       decSelect.value,
+        thousandsSep:     thouSelect.value,
+        hideZeroDecimals: document.getElementById('hide-zero-decimals').checked,
+    });
+    document.querySelectorAll('input[name="format-set"]').forEach(r => r.addEventListener('change', () => {
+        editingSet = r.value;
+        showFormatSet(editingSet);
+    }));
+    showFormatSet(editingSet);
 
     // Dim "to currency" group when conversion is off
     const toCurrencyGroup  = document.getElementById('to-currency-group');
@@ -136,13 +163,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     conversionToggle.addEventListener('change', syncPanel);
     fromCurrencySelect.addEventListener('change', syncStripTrail);
 
-    const saveAndRefresh = async data => {
-        await chrome.storage.sync.set(data);
-        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-        if (tab?.id) chrome.tabs.reload(tab.id);
-        setTimeout(() => window.close(), 600);
-    };
-
     // Page navigation
     document.getElementById('more-btn').addEventListener('click', () => {
         document.getElementById('page-main').hidden = true;
@@ -153,33 +173,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('page-main').hidden = false;
     });
 
-    // Main save
-    document.getElementById('save').addEventListener('click', () => {
-        const toCode            = toCurrencyInput.value.trim().toUpperCase();
-        const fromCode          = fromCurrencySelect.value || null;
-        const conversionEnabled = conversionToggle.checked;
-        const hoverEnabled      = document.getElementById('hover-enabled').checked;
-        // The checkbox is hidden for non-USD stores; don't persist a stale tick.
-        const stripTrailingCode = document.getElementById('strip-trailing').checked && fromCode === 'USD';
-        if (!toCode || !fromCode) return;
-        toCurrencyInput.setCustomValidity('');
-        if (!isKnownCurrency(toCode)) {
-            toCurrencyInput.setCustomValidity(`"${toCode}" is not a recognised currency code.`);
-            toCurrencyInput.reportValidity();
+    // No Save button: every change is stored right away, and the content scripts in open
+    // Steam tabs pick it up through storage.onChanged and re-convert without a reload.
+    const readSettings = () => {
+        const fromCode = fromCurrencySelect.value || null;
+        const settings = {
+            conversionEnabled: conversionToggle.checked,
+            hoverEnabled:      document.getElementById('hover-enabled').checked,
+            // The checkbox is hidden for non-USD stores; don't persist a stale tick.
+            stripTrailingCode: document.getElementById('strip-trailing').checked && fromCode === 'USD',
+        };
+        formatting[editingSet] = readFormatSet();
+        settings.formatting = { converted: { ...formatting.converted }, original: { ...formatting.original } };
+        if (fromCode) settings.fromCurrency = fromCode;
+        // An unfinished or unknown code isn't saved — the last valid one stays in effect.
+        const toCode = toCurrencyInput.value.trim().toUpperCase();
+        if (isKnownCurrency(toCode)) settings.targetCurrency = toCode;
+        return settings;
+    };
+
+    // A floppy disk flashes in the corner after each save (red if it failed — sync
+    // storage can refuse writes, e.g. its per-minute write limit).
+    const indicator = document.querySelector('.save-indicator');
+    const showSaveResult = ok => {
+        indicator.classList.toggle('error', !ok);
+        indicator.querySelector('.save-text').textContent = ok ? 'Saved' : "Couldn't save";
+        // Restart the flash when saves come quickly one after another.
+        indicator.classList.remove('visible');
+        void indicator.offsetWidth;
+        indicator.classList.add('visible');
+    };
+    indicator.addEventListener('animationend', () => indicator.classList.remove('visible'));
+
+    let saveTimer;
+    const save = () => {
+        clearTimeout(saveTimer);
+        chrome.storage.sync.set(readSettings())
+            .then(() => {
+                // Once the new layout is saved, the pre-1.2 flat formatting keys are obsolete.
+                if (LEGACY_FORMAT_KEYS.some(k => k in stored)) {
+                    LEGACY_FORMAT_KEYS.forEach(k => delete stored[k]);
+                    return chrome.storage.sync.remove(LEGACY_FORMAT_KEYS);
+                }
+            })
+            .then(() => showSaveResult(true), () => showSaveResult(false));
+    };
+    // Typing waits for a pause, so a half-typed custom symbol doesn't re-convert every tab per key.
+    const scheduleSave = () => {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(save, 400);
+    };
+
+    // Checkboxes, radios and selects save at once. These listeners are added after the
+    // separator handlers above, so they save the values those handlers just adjusted.
+    // Switching between the Converted/Original sets only changes the view, so it doesn't save.
+    document.querySelectorAll('input[type="checkbox"], input[type="radio"]:not([name="format-set"]), select').forEach(el => {
+        el.addEventListener('change', save);
+    });
+    document.getElementById('custom-symbol').addEventListener('input', scheduleSave);
+
+    // Leaving the field with an unknown code: say so. The last valid code stays in effect.
+    toCurrencyInput.addEventListener('change', () => {
+        const toCode = toCurrencyInput.value.trim().toUpperCase();
+        if (!toCode) return;
+        if (isKnownCurrency(toCode)) {
+            toCurrencyInput.value = toCode;
+            save();
             return;
         }
-        saveAndRefresh({ targetCurrency: toCode, fromCurrency: fromCode, conversionEnabled, hoverEnabled, stripTrailingCode });
-    });
-
-    // More settings save
-    document.getElementById('save-more').addEventListener('click', () => {
-        const customSymbol     = document.getElementById('custom-symbol').value.trim();
-        const symbolPosition   = document.querySelector('input[name="sym-pos"]:checked').value;
-        const symbolSpace      = document.getElementById('sym-space').checked;
-        const applyFormatting  = document.querySelector('input[name="apply-to"]:checked')?.value || 'converted';
-        const decimalSep       = document.querySelector('input[name="dec-sep"]:checked')?.value  || '';
-        const thousandsSep     = document.getElementById('thou-sep').value;
-        const hideZeroDecimals = document.getElementById('hide-zero-decimals').checked;
-        saveAndRefresh({ customSymbol, symbolPosition, symbolSpace, applyFormatting, decimalSep, thousandsSep, hideZeroDecimals });
+        toCurrencyInput.setCustomValidity(`"${toCode}" is not a recognised currency code.`);
+        toCurrencyInput.reportValidity();
     });
 });
