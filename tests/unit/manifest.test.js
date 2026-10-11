@@ -7,17 +7,19 @@ const path = require('path');
 
 const ROOT = process.env.EXT_ROOT || path.resolve(__dirname, '..', '..');
 const load = f => JSON.parse(fs.readFileSync(path.join(ROOT, f), 'utf8'));
-const firefox = load('manifest.json');
-const firefoxCopy = load('manifest.firefox.json');
+// manifest.json is a copy of the Chrome manifest, so "Load unpacked" on the repo folder
+// works in Chrome; Firefox loads manifest.firefox.json.
+const main = load('manifest.json');
+const firefox = load('manifest.firefox.json');
 const chrome = load('manifest.chrome.json');
 
-test('manifest.json and manifest.firefox.json are identical', () => {
-    assert.deepEqual(firefoxCopy, firefox);
+test('manifest.json and manifest.chrome.json are identical', () => {
+    assert.deepEqual(main, chrome);
 });
 
 test('Chrome and Firefox manifests agree on everything but the browser-specific keys', () => {
     for (const key of ['version', 'name', 'description', 'icons', 'action', 'host_permissions', 'content_scripts']) {
-        assert.deepEqual(chrome[key], firefox[key], `"${key}" differs between manifest.chrome.json and manifest.json`);
+        assert.deepEqual(chrome[key], firefox[key], `"${key}" differs between manifest.chrome.json and manifest.firefox.json`);
     }
 });
 
