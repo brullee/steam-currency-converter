@@ -1,0 +1,30 @@
+name: Live check
+
+# Weekly run against the real Steam store and the real rate API. CI only proves the code
+# was fine when it was pushed; this catches what breaks while the repo sits untouched -
+# Steam renaming the classes the extension reads, or exchangerate-api.com changing or
+# going away (the extension then silently stops converting). A failed run emails whoever
+# last edited this schedule.
+on:
+  schedule:
+    - cron: '0 6 * * 1'
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: tests
+
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: tests/package-lock.json
+      - run: npm ci
+      - run: npm run test:live
+        env:
+          BROWSER_PATH: /usr/bin/google-chrome

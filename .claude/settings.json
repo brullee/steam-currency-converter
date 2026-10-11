@@ -1,0 +1,21 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/block-push.mjs",
+            "statusMessage": "Checking that Claude isn't pushing..."
+          },
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/check-commit-message.mjs",
+            "statusMessage": "Checking commit message length..."
+          }
+        ]
+      }
+    ]
+  }
+}

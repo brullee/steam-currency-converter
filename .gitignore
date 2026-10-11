@@ -1,1 +1,6 @@
 todo.md
+node_modules
+
+# Claude Code: .claude/ is shared, personal overrides are not
+.claude/settings.local.json
+CLAUDE.local.md

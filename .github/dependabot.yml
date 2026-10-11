@@ -1,0 +1,17 @@
+version: 2
+
+# Monthly and grouped, so an idle repo gets at most one PR per ecosystem a month. The
+# PRs run CI, which doubles as a check that the suite still works against today's Chrome.
+updates:
+  - package-ecosystem: npm
+    directory: /tests
+    schedule:
+      interval: monthly
+    groups:
+      test-deps:
+        patterns: ['*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly

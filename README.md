@@ -110,9 +110,31 @@ The popup has two layers of settings.
 
 - Manifest V3, Chrome and Firefox
 - Prices are detected with per-currency regex that handles symbol position, regional separators, non-breaking spaces, and alternate symbol forms (e.g. PHP shows `₱` in search but `P` on game pages)
-- Converted nodes are stamped with `data-cc-rate` so the MutationObserver skips them on re-runs without any comparison logic
+- Each converted text node is tracked in a WeakMap (original, converted, rate) so the MutationObserver skips it on re-runs and never converts the same text twice
 - Hover targets and their associated text nodes are cached in a WeakMap to avoid re-walking the DOM on every mouse event
 - The background service worker retries failed rate fetches once and keeps itself alive across browser sessions
+
+
+## Tests
+
+The `tests/` folder is self-contained and not part of the shipped extension.
+
+```bash
+cd tests
+npm install
+npm test            # unit tests: content scripts in jsdom
+npm run test:e2e    # end-to-end: the Chrome build in Google Chrome, on fixture pages served at Steam URLs
+npm run test:live   # the same build against the real Steam store and rate API (needs network)
+```
+
+The e2e and live suites use Google Chrome from its default install location. Set `BROWSER=helium` for Helium or `BROWSER_PATH` for any other Chromium-based browser, and `HEADED=1` to watch it run. Exchange rates are seeded in the e2e suite, so it and the unit tests run offline.
+
+GitHub Actions runs the unit and e2e suites on every push and pull request, and the live suite weekly, so a Steam markup change or a dead rate API shows up even when nobody is working on the code.
+
+
+## AI-assisted development
+
+This repo is set up for [Claude Code](https://claude.com/claude-code): `CLAUDE.md` holds the project rules, `.claude/skills/` has a `verify` gate (tests + no weakened tests) and a `check-live` check, and `.claude/hooks/` blocks Claude from pushing and keeps its commit messages short and unattributed. Every AI-made change still goes through the same tests and CI as a hand-written one.
 
 
 ## Disclaimer
