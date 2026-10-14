@@ -44,26 +44,28 @@ That's it. Changes save as you make them, and Steam tabs that are already open s
 
 **Firefox:** Install from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/steam-currency-converter/), then allow access to the Steam sites from the extension's **Permissions** tab in `about:addons`.
 
-To install without the stores, see [Install from source](#install-from-source).
+To install without the stores, see [Install manually](#install-manually).
 
-### Install from source
+### Install manually
 
-You can run the extension straight from this repository instead of installing it from a store, for example to try a change before it's published. First get the code, either with `git clone https://github.com/brullee/steam-currency-converter.git` or with **Code → Download ZIP** on GitHub (extract it afterwards).
+Each [release](https://github.com/brullee/steam-currency-converter/releases/latest) has a ready-made zip for each browser: `SCC-Chrome-…zip` and `SCC-Firefox-…zip`. Use this to install without the stores, or to try a version before it reaches them.
 
 #### Chrome, Edge, Brave and other Chromium browsers
 
-1. Go to `chrome://extensions` (or `edge://extensions`, `brave://extensions`) and turn on **Developer mode**.
-2. Click **Load unpacked** and select the repo folder.
+1. Download the Chrome zip from the [latest release](https://github.com/brullee/steam-currency-converter/releases/latest) and extract it.
+2. Go to `chrome://extensions` (or `edge://extensions`, `brave://extensions`) and turn on **Developer mode**.
+3. Click **Load unpacked** and select the extracted folder.
 
-To update, get the new code, click the reload button on the extension's card, and refresh any open Steam tabs.
+To update, download the new release, replace the folder's contents, click the reload button on the extension's card, and refresh any open Steam tabs.
 
 #### Firefox
 
-1. Go to `about:debugging` and click **This Firefox**.
-2. Click **Load Temporary Add-on** and select `manifest.firefox.json` in the repo folder.
-3. In `about:addons`, open the extension's **Permissions** tab and allow access to the Steam sites.
+1. Download the Firefox zip from the [latest release](https://github.com/brullee/steam-currency-converter/releases/latest). No need to extract it.
+2. Go to `about:debugging` and click **This Firefox**.
+3. Click **Load Temporary Add-on** and select the zip.
+4. In `about:addons`, open the extension's **Permissions** tab and allow access to the Steam sites.
 
-Firefox removes temporary add-ons when it closes, so you'll need to load it again after a restart. Regular Firefox only installs signed add-ons permanently. Firefox Developer Edition and Nightly can install unsigned ones if you set `xpinstall.signatures.required` to `false` in `about:config`: zip the `background`, `content`, `icons`, `popup` and `shared` folders together with `manifest.firefox.json` renamed to `manifest.json` at the top of the zip, then use **Install Add-on From File** in `about:addons`.
+Firefox removes temporary add-ons when it closes, so you'll need to load it again after a restart. Regular Firefox only installs signed add-ons permanently. Firefox Developer Edition and Nightly can install unsigned ones: set `xpinstall.signatures.required` to `false` in `about:config`, then use **Install Add-on From File** in `about:addons` and pick the same zip.
 
 ### Steam Client
 
@@ -71,9 +73,9 @@ You can run this extension directly inside the Steam desktop client using two co
 
 1. Install **[Millennium](https://github.com/SteamClientHomebrew/Millennium)**, a plugin loader for the Steam client
 2. Install the **[Extendium](https://github.com/BossSloth/Extendium)** plugin via Millennium, which adds Chrome extension support to Steam
-3. Load this extension through Extendium, the same way you would in Chrome (see [Install from source](#install-from-source))
+3. Download the Chrome zip from the [latest release](https://github.com/brullee/steam-currency-converter/releases/latest), extract it, and load the folder through Extendium the same way you would in Chrome
 
-> **Note:** This isn't officially supported by Valve and may violate their terms of service. Use it at your own risk.
+> **Note:** This isn't officially supported by Valve and may violate their terms of service. While Millennium is mentioned on Steam's own forums, it doesn't mean it's endorsed by Valve. Use it at your own risk.
 
 
 ## What's included
