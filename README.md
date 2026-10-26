@@ -42,7 +42,7 @@ That's it. Changes save as you make them, and Steam tabs that are already open s
 
 **Chrome:** Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/steam-currency-converter/kkpmhkmhbcdkagimlpcofbffhmdppmmb).
 
-**Firefox:** Install from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/steam-currency-converter/), then allow access to the Steam sites from the extension's **Permissions** tab in `about:addons`.
+**Firefox:** Install from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/steam_currency_converter/), then allow access to the Steam sites from the extension's **Permissions** tab in `about:addons`.
 
 To install without the stores, see [Install manually](#install-manually).
 
