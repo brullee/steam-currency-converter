@@ -158,9 +158,7 @@ This repo is set up for [Claude Code](https://claude.com/claude-code):
 
 - `CLAUDE.md` holds the project rules.
 - `.claude/skills/` has a `verify` skill (runs the tests and checks none were weakened) and a `check-live` skill (runs the live suite).
-- `.claude/hooks/` stops Claude from pushing and keeps its commit messages short and free of AI attribution.
-
-AI-made changes go through the same tests and CI as hand-written ones.
+- `.claude/hooks/` stops Claude from pushing and keeps its commit messages short.
 
 
 ## Disclaimer
