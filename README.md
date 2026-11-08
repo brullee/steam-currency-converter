@@ -42,7 +42,7 @@ That's it. Changes save as you make them, and Steam tabs that are already open s
 
 **Chrome:** Install from the [Chrome Web Store](https://chromewebstore.google.com/detail/steam-currency-converter/kkpmhkmhbcdkagimlpcofbffhmdppmmb).
 
-**Firefox:** Install from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/steam-currency-converter/), then allow access to the Steam sites from the extension's **Permissions** tab in `about:addons`.
+**Firefox:** Install from [Firefox Add-ons](https://addons.mozilla.org/en-US/firefox/addon/steam_currency_converter/), then allow access to the Steam sites from the extension's **Permissions** tab in `about:addons`.
 
 To install without the stores, see [Install manually](#install-manually).
 
@@ -158,9 +158,7 @@ This repo is set up for [Claude Code](https://claude.com/claude-code):
 
 - `CLAUDE.md` holds the project rules.
 - `.claude/skills/` has a `verify` skill (runs the tests and checks none were weakened) and a `check-live` skill (runs the live suite).
-- `.claude/hooks/` stops Claude from pushing and keeps its commit messages short and free of AI attribution.
-
-AI-made changes go through the same tests and CI as hand-written ones.
+- `.claude/hooks/` stops Claude from pushing and keeps its commit messages short.
 
 
 ## Disclaimer
