@@ -99,8 +99,10 @@ function toLabel(amount, srcHasDecimal = true, meta = TO, config = CONFIG) {
 // "JOD: ₪1.23" — used in sell/buy input preview labels.
 const inputPreviewLabel = amt => `Conversion: ${toLabel(amt)}`;
 
-// "₪1.23 (₴100)" — converted price followed by original in parens.
+// "₪1.23 (₴100)" — converted price followed by original in parens. With conversion
+// off both halves are the same currency and amount, so only one is shown.
 function withOriginal(priceText) {
+    if (strippingOnly) return convertPriceText(priceText);
     return `${convertPriceText(priceText)} (${formatOriginalText(priceText)})`;
 }
 

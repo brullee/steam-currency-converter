@@ -205,6 +205,19 @@ test('conversion off uses the original set; an empty original set leaves the pag
     assert.equal(p.text('p'), '$1,234.00');
 });
 
+test('conversion off shows the market wallet once, not "X (X)"', async () => {
+    const p = loadContent('<span id="marketWalletBalanceAmount">$1,234.00</span>',
+        { ...USD_EUR, conversionEnabled: false, ...fmt({}, { hideZeroDecimals: true }) }, rates);
+    await sleep(SETTLE);
+    assert.equal(p.text('marketWalletBalanceAmount'), '$1,234');
+    const before = p.runCount();
+    await sleep(1000);
+    assert.equal(p.runCount() - before, 0, 'run() kept firing with no page changes');
+    await p.setSettings({ conversionEnabled: true });
+    await sleep(SETTLE);
+    assert.equal(p.text('marketWalletBalanceAmount'), '617,00€ ($1,234)');
+});
+
 test('settings saved before 1.2 (one flat set + applyFormatting) still apply', async () => {
     const conv = loadContent('<div id="p">$1,234.00</div>',
         { ...USD_EUR, customSymbol: 'EUR', symbolPosition: 'before', symbolSpace: true }, rates);

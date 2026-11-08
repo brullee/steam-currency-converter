@@ -36,8 +36,20 @@ function parseInputAmount(val) {
 
 // Writing textContent always fires a mutation, even when unchanged — and every
 // mutation schedules another observer pass. Only write when the text differs.
+// Takes an element or a single text node.
 function setText(el, text) {
     if (el.textContent !== text) el.textContent = text;
+}
+
+// The wallet element's own balance text. With pending funds Steam adds a child
+// ("176,15₴<span>Pending: 5,00₴</span>"), so the element's full textContent is no
+// longer a single price. Only the direct text node is ours; the walker converts
+// the pending child like any other price.
+function walletTextNode(el) {
+    for (const n of el.childNodes) {
+        if (n.nodeType === Node.TEXT_NODE && n.textContent.trim()) return n;
+    }
+    return null;
 }
 
 // Converts the wallet balance elements and returns the original (unconverted) wallet text
@@ -51,31 +63,36 @@ function convertWalletBalances() {
         const el = document.querySelector(selector);
         if (!el) continue;
         if (el.dataset.ccHovering) continue;
+        const node = walletTextNode(el);
+        if (!node) continue;
 
         // Reuse the stored original only while the element still shows our output;
         // anything else is a fresh balance written by Steam (e.g. after a purchase).
-        const current  = el.textContent.trim();
+        const current  = node.textContent.trim();
         const original = (el.dataset.ccOrig && current === el.dataset.ccConv) ? el.dataset.ccOrig : current;
         if (!PRICE_MATCH_REGEX.test(original)) continue;
 
         const converted = el.id === 'marketWalletBalanceAmount'
             ? withOriginal(original)
             : convertPriceText(original);
-        setText(el, converted);
+        setText(node, converted);
 
         // Attached once per page; the settings can change afterwards, so the handlers
-        // check them on every hover instead of at setup.
+        // check them on every hover instead of at setup. They look the text node up
+        // each time, since Steam may have replaced it since.
         if (el.id === 'header_wallet_balance' && !el.dataset.ccHoverSetup) {
             el.dataset.ccHoverSetup = 'true';
             el.addEventListener('mouseenter', () => {
-                if (!el.dataset.ccConv || !hoverOn || strippingOnly) return;
+                const n = walletTextNode(el);
+                if (!n || !el.dataset.ccConv || !hoverOn || strippingOnly) return;
                 el.dataset.ccHovering = 'true';
-                el.textContent = formatOriginalText(el.dataset.ccOrig);
+                n.textContent = formatOriginalText(el.dataset.ccOrig);
             });
             el.addEventListener('mouseleave', () => {
                 if (!el.dataset.ccHovering) return;
                 delete el.dataset.ccHovering;
-                el.textContent = el.dataset.ccConv;
+                const n = walletTextNode(el);
+                if (n) n.textContent = el.dataset.ccConv;
             });
         }
         el.dataset.ccOrig = original;
@@ -234,7 +251,8 @@ function restoreMarketElements() {
     for (const id of ['marketWalletBalanceAmount', 'header_wallet_balance']) {
         const el = document.getElementById(id);
         if (!el?.dataset.ccConv) continue;
-        if (el.dataset.ccHovering || el.textContent.trim() === el.dataset.ccConv) el.textContent = el.dataset.ccOrig;
+        const node = walletTextNode(el);
+        if (node && (el.dataset.ccHovering || node.textContent.trim() === el.dataset.ccConv)) node.textContent = el.dataset.ccOrig;
         delete el.dataset.ccOrig;
         delete el.dataset.ccConv;
         delete el.dataset.ccHovering;

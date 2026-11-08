@@ -87,6 +87,22 @@ test('header wallet hover shows original and restores', async () => {
     assert.equal(el.textContent, '10,00€');
 });
 
+test('header wallet with pending funds converts both balance and pending', async () => {
+    const p = loadContent('<a id="header_wallet_balance">$20.00<span id="pend">Pending: $4.00</span></a>', USD_EUR);
+    await sleep(SETTLE);
+    const el = p.document.getElementById('header_wallet_balance');
+    assert.equal(el.firstChild.textContent, '10,00€');
+    assert.equal(p.text('pend'), 'Pending: 2,00€');
+    el.dispatchEvent(new p.window.MouseEvent('mouseenter'));
+    assert.equal(el.firstChild.textContent, '$20.00');
+    assert.ok(p.document.getElementById('pend'), 'hover must not wipe the pending line');
+    el.dispatchEvent(new p.window.MouseEvent('mouseleave'));
+    assert.equal(el.firstChild.textContent, '10,00€');
+    const before = p.runCount();
+    await sleep(1000);
+    assert.equal(p.runCount() - before, 0, 'run() kept firing with no page changes');
+});
+
 test('sell previews track input values', async () => {
     const p = loadContent(`
         <div class="market_sell_dialog_input_group"><input id="market_sell_currency_input" value="$1,234.56"></div>
