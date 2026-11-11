@@ -5,17 +5,16 @@
 function runOnRoot(root) {
     if (!FROM || !rateReady) return;
 
-    const rateKey = String(rate);
+    const rateKey = `${rate}:${codeRatesVersion}`;
     const walker = document.createTreeWalker(
         root,
         NodeFilter.SHOW_TEXT,
         {
+            // Runs on every text node of the page, so the cheapest checks go first and
+            // the selector work (closest) only happens for the few nodes holding a price.
             acceptNode(node) {
                 const parent = node.parentElement;
                 if (!parent) return NodeFilter.FILTER_REJECT;
-                if (parent.closest('.itad-pricing, .es_regional')) return NodeFilter.FILTER_REJECT;
-                if (MANAGED_IDS.has(parent.id)) return NodeFilter.FILTER_REJECT;
-                if (parent.dataset.ccHovering)        return NodeFilter.FILTER_REJECT;
                 // Already converted at the current rate — nothing to do.
                 // This is the critical optimisation for wishlist performance: on every
                 // MutationObserver re-run the vast majority of nodes fall here and are
@@ -25,7 +24,11 @@ function runOnRoot(root) {
                 // Accept nodes that contain FROM-currency prices or were already converted
                 // (but need re-converting because the rate changed).
                 PRICE_REGEX.lastIndex = 0;
-                if (!PRICE_REGEX.test(node.textContent) && !st) return NodeFilter.FILTER_REJECT;
+                if (!st && !PRICE_REGEX.test(node.textContent) && !hasCodePrice(node.textContent)) return NodeFilter.FILTER_REJECT;
+                if (MANAGED_IDS.has(parent.id)) return NodeFilter.FILTER_REJECT;
+                if (parent.classList.contains('cc-own')) return NodeFilter.FILTER_REJECT;
+                if (parent.dataset.ccHovering)        return NodeFilter.FILTER_REJECT;
+                if (parent.closest(STEAM.otherExtensions)) return NodeFilter.FILTER_REJECT;
                 return NodeFilter.FILTER_ACCEPT;
             }
         }
@@ -44,7 +47,9 @@ function runOnRoot(root) {
         const currentText = node.textContent;
         const original = (st && currentText === st.conv) ? st.orig : currentText;
         PRICE_REGEX.lastIndex = 0;
-        const converted = original.replace(PRICE_REGEX, m => convertPriceText(m));
+        // FROM prices first, then ones naming another currency. Our own output never
+        // names a code other than TO's, which the second pass leaves alone.
+        const converted = convertCodePrices(original.replace(PRICE_REGEX, m => convertPriceText(m)));
         if (converted === original) {
             textState.delete(node);
             continue;
@@ -74,6 +79,9 @@ function convertMarketElements() {
     const walletOriginal = convertWalletBalances();
     updateSellPreviews(walletOriginal);
     updateBuyPreviews();
+    annotateDialogPrices();
+    updateBetaOrderPreview();
+    updatePriceFilterPreviews();
 }
 
 // Puts the page back the way Steam rendered it, so new settings convert from the

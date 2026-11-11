@@ -1,19 +1,26 @@
+/* Same visual language as the store images: deep navy, Steam blue for structure,
+   the extension's green for "converted" and "on". */
 :root {
-    --color-bg:             #1b2838;
-    --color-text:           #c6d4df;
-    --color-text-muted:     #8f98a0;
-    --color-accent:         #66c0f4;
-    --color-white:          #ffffff;
-    --color-input-bg:       #316282;
-    --color-border:         #4c91b5;
-    --color-toggle-bg:      #233749;
-    --color-toggle-checked: #1a4f7a;
-    --color-btn-top:        #4d8ab5;
-    --color-btn-bottom:     #356a94;
-    /* Save indicator: the same green the extension uses for converted prices
-       (content/style.css), and a muted red for a failed save */
-    --color-saved:          #85bb65;
-    --color-error:          #d9534f;
+    --navy-0:        #0b131c;
+    --navy-1:        #121d2a;
+    --navy-2:        #1b2838;
+    --field:         rgba(6, 12, 19, 0.55);
+    --field-hover:   rgba(6, 12, 19, 0.75);
+    --line:          rgba(102, 192, 244, 0.22);
+    --line-strong:   rgba(102, 192, 244, 0.45);
+    --card:          rgba(255, 255, 255, 0.035);
+    --card-line:     rgba(255, 255, 255, 0.07);
+    --blue:          #66c0f4;
+    --blue-soft:     rgba(102, 192, 244, 0.14);
+    --text:          #dbe5ee;
+    --text-strong:   #ffffff;
+    --muted:         #8ea2b4;
+    /* Converted prices, the save indicator and "on": the green the content scripts use */
+    --green:         #8fd16a;
+    --green-soft:    rgba(133, 187, 101, 0.16);
+    --green-line:    rgba(133, 187, 101, 0.5);
+    --error:         #e0625d;
+    --radius:        7px;
 }
 
 * {
@@ -22,35 +29,69 @@
     padding: 0;
 }
 
-body {
-    width: 220px;
-    padding: 16px;
-    font-family: "Motiva Sans", Arial, sans-serif;
-    background: var(--color-bg);
-    color: var(--color-text);
+html {
+    background: var(--navy-1);
 }
+
+body {
+    width: 300px;
+    font-family: "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    font-size: 13px;
+    color: var(--text);
+    background:
+        radial-gradient(240px 180px at 100% 0%, rgba(102, 192, 244, 0.16), transparent 70%),
+        radial-gradient(220px 160px at 0% 100%, rgba(133, 187, 101, 0.09), transparent 70%),
+        linear-gradient(160deg, var(--navy-2) 0%, var(--navy-1) 60%, var(--navy-0) 100%);
+    -webkit-font-smoothing: antialiased;
+}
+
+.page {
+    padding: 16px 16px 14px;
+}
+
+[hidden] { display: none !important; }
+
+/* ---------- Header ---------- */
 
 .header-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 16px;
+    gap: 10px;
+    margin-bottom: 18px;
+}
+
+.brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.brand img {
+    flex: none;
+    filter: drop-shadow(0 3px 8px rgba(0, 0, 0, 0.45));
 }
 
 h1 {
-    font-size: 13px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-accent);
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.005em;
+    color: var(--text-strong);
+    white-space: nowrap;
 }
 
-/* Toggle switch */
+.header-more {
+    justify-content: flex-start;
+}
+
+/* ---------- On / off switch ---------- */
+
 .toggle {
     position: relative;
     display: inline-block;
-    width: 36px;
-    height: 20px;
+    width: 40px;
+    height: 22px;
     flex-shrink: 0;
     cursor: pointer;
 }
@@ -65,25 +106,26 @@ h1 {
 .toggle-track {
     position: absolute;
     inset: 0;
-    background: var(--color-toggle-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 20px;
-    transition: background 0.15s ease-out, border-color 0.15s ease-out, filter 0.15s ease-out;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 22px;
+    transition: background 0.18s ease-out, border-color 0.18s ease-out, box-shadow 0.18s ease-out;
 }
 
 .toggle-thumb {
     position: absolute;
-    top: 2px;
-    left: 2px;
+    top: 3px;
+    left: 3px;
     width: 14px;
     height: 14px;
-    background: var(--color-border);
+    background: #9aabbb;
     border-radius: 50%;
-    transition: transform 0.15s ease-out, background 0.15s ease-out;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+    transition: transform 0.18s ease-out, background 0.18s ease-out;
 }
 
 .toggle:hover .toggle-track {
-    filter: brightness(1.15);
+    border-color: rgba(255, 255, 255, 0.3);
 }
 
 .toggle:active .toggle-thumb {
@@ -91,102 +133,61 @@ h1 {
 }
 
 .toggle input:checked + .toggle-track {
-    background: var(--color-toggle-checked);
-    border-color: var(--color-accent);
+    background: var(--green-soft);
+    border-color: var(--green-line);
+    box-shadow: 0 0 12px rgba(133, 187, 101, 0.18);
 }
 
 .toggle input:checked + .toggle-track .toggle-thumb {
-    transform: translateX(16px);
-    background: var(--color-accent);
+    transform: translateX(18px);
+    background: var(--green);
 }
 
-[hidden] { display: none !important; }
-
-/* Two-option switch in the popup's own colours: the chosen side looks like the
-   popup's buttons, the other sits back in the toggle's dark track colour. */
-.segmented {
-    display: flex;
-    margin-bottom: 16px;
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
-    background: var(--color-toggle-bg);
-    overflow: hidden;
+.toggle input:focus-visible + .toggle-track {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
 }
 
-.segmented label {
-    flex: 1;
-    margin: 0;
-    cursor: pointer;
-}
-
-.segmented label + label {
-    border-left: 1px solid var(--color-border);
-}
-
-.segmented input {
-    position: absolute;
-    opacity: 0;
-    width: 0;
-    height: 0;
-}
-
-.segmented span {
-    display: block;
-    padding: 7px 0;
-    text-align: center;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: none;
-    letter-spacing: normal;
-    color: var(--color-text-muted);
-    transition: color 0.12s ease-out;
-}
-
-.segmented label:hover span {
-    color: var(--color-text);
-}
-
-.segmented input:checked + span {
-    background: linear-gradient(to bottom, var(--color-btn-top), var(--color-btn-bottom));
-    color: var(--color-white);
-}
-
-.segmented input:focus-visible + span {
-    outline: 1px solid var(--color-accent);
-    outline-offset: -2px;
-}
-
-/* Dim individual fields when they are unavailable */
-.field-dimmed {
-    opacity: 0.35;
-    pointer-events: none;
-    transition: opacity 0.15s;
-}
+/* ---------- Labels and fields ---------- */
 
 label {
     display: block;
-    font-size: 11px;
+    font-size: 10.5px;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--color-text-muted);
-    margin-bottom: 4px;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin-bottom: 6px;
 }
 
 input, select {
     width: 100%;
-    padding: 7px 10px;
+    padding: 9px 11px;
     font-family: inherit;
-    font-size: 13px;
-    background: var(--color-input-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
-    color: var(--color-white);
+    font-size: 14px;
+    font-weight: 500;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text-strong);
     outline: none;
     margin-bottom: 16px;
+    transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out, background 0.12s ease-out;
+}
+
+input::placeholder {
+    color: rgba(142, 162, 180, 0.7);
+    font-weight: 400;
+}
+
+input:hover, select:hover {
+    background: var(--field-hover);
+    border-color: var(--line-strong);
 }
 
 input:focus, select:focus {
-    border-color: var(--color-accent);
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(102, 192, 244, 0.18);
 }
 
 select {
@@ -195,7 +196,12 @@ select {
     appearance: none;
     -webkit-appearance: none;
     cursor: pointer;
-    padding-right: 28px;
+    padding-right: 32px;
+}
+
+select option {
+    background: var(--navy-1);
+    color: var(--text-strong);
 }
 
 .select-wrapper {
@@ -210,61 +216,241 @@ select {
 .select-wrapper::after {
     content: "";
     position: absolute;
-    right: 12px;
+    right: 13px;
     top: 50%;
-    transform: translateY(-65%) rotate(45deg);
-    width: 5px;
-    height: 5px;
-    border-right: 2px solid var(--color-white);
-    border-bottom: 2px solid var(--color-white);
+    transform: translateY(-70%) rotate(45deg);
+    width: 6px;
+    height: 6px;
+    border-right: 2px solid var(--blue);
+    border-bottom: 2px solid var(--blue);
     pointer-events: none;
+}
+
+/* ---------- Styled dropdown (custom-select.js) ----------
+   The real <select> stays underneath, invisible, holding the value. */
+
+.select-wrapper select.cs-native {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.cs-button {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 9px 32px 9px 11px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    text-align: left;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: var(--text-strong);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.12s ease-out, box-shadow 0.12s ease-out, background 0.12s ease-out;
+}
+
+.cs-text {
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.cs-button:hover {
+    background: var(--field-hover);
+    border-color: var(--line-strong);
+}
+
+.cs-button:focus-visible,
+.cs-open .cs-button {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 3px rgba(102, 192, 244, 0.18);
+}
+
+/* Arrow turns over while the list is open */
+.select-wrapper.cs-open::after {
+    transform: translateY(-20%) rotate(-135deg);
+}
+
+.cs-list {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 196px;
+    overflow-y: auto;
+    padding: 4px;
+    background: #101a26;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+    list-style: none;
+    z-index: 100;
+}
+
+.cs-list li {
+    padding: 7px 9px;
+    border-radius: 5px;
+    font-size: 13px;
+    color: var(--text-strong);
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.cs-list li[aria-selected="true"] {
+    color: var(--blue);
+    font-weight: 600;
+}
+
+.cs-list li.cs-active {
+    background: var(--blue-soft);
+}
+
+.cs-list li[aria-disabled="true"] {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+/* Dim individual fields when they are unavailable */
+.field-dimmed {
+    opacity: 0.35;
+    pointer-events: none;
+    transition: opacity 0.15s;
+}
+
+/* ---------- Currency combobox ---------- */
+
+.cc-combobox {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.cc-combobox input {
+    margin-bottom: 0;
+}
+
+#to-currency-dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    max-height: 168px;
+    overflow-y: auto;
+    padding: 4px;
+    background: #101a26;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.55);
+    list-style: none;
+    z-index: 100;
+}
+
+#to-currency-dropdown li {
+    padding: 6px 9px;
+    border-radius: 5px;
+    font-size: 13px;
+    color: var(--text-strong);
+    cursor: pointer;
+}
+
+#to-currency-dropdown li:hover,
+#to-currency-dropdown li[aria-selected="true"] {
+    background: var(--blue-soft);
+    color: #ffffff;
+}
+
+/* ---------- Checkboxes and radios (real inputs, restyled) ---------- */
+
+.checks {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin: 2px 0 16px;
+}
+
+.checks .checkbox-label {
+    margin-bottom: 0;
 }
 
 .checkbox-label,
 .radio-label {
     display: flex;
     align-items: center;
-    font-size: 11px;
+    font-size: 13px;
+    font-weight: 400;
     text-transform: none;
     letter-spacing: normal;
-    color: var(--color-text);
+    color: var(--text);
     cursor: pointer;
     transition: color 0.12s ease-out;
 }
 
 .checkbox-label {
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 4px;
     position: relative;
 }
 
 .radio-label {
-    gap: 4px;
+    gap: 7px;
+    margin-bottom: 0;
 }
 
 .checkbox-label:hover,
 .radio-label:hover {
-    color: var(--color-white);
+    color: var(--text-strong);
 }
 
 .checkbox-label input[type="checkbox"],
 .radio-label input[type="radio"] {
-    width: auto;
+    appearance: none;
+    -webkit-appearance: none;
+    flex: none;
+    width: 17px;
+    height: 17px;
     padding: 0;
-    margin-bottom: 0;
-    accent-color: var(--color-accent);
-    filter: brightness(1);
-    transition: filter 0.12s ease-out, transform 0.06s ease-out;
+    margin: 0;
+    background: var(--field);
+    border: 1.5px solid var(--line-strong);
+    cursor: pointer;
+    transition: background 0.12s ease-out, border-color 0.12s ease-out, transform 0.06s ease-out;
+}
+
+.checkbox-label input[type="checkbox"] {
+    border-radius: 5px;
+}
+
+.radio-label input[type="radio"] {
+    border-radius: 50%;
+}
+
+.checkbox-label input[type="checkbox"]:checked {
+    background: var(--blue) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.4l3 3 6-6.3' fill='none' stroke='%230b131c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 13px no-repeat;
+    border-color: var(--blue);
+}
+
+.radio-label input[type="radio"]:checked {
+    background: radial-gradient(circle, var(--blue) 0 4px, transparent 4.5px), var(--field);
+    border-color: var(--blue);
+}
+
+.checkbox-label:hover input,
+.radio-label:hover input {
+    border-color: var(--blue);
 }
 
 .checkbox-label:active input[type="checkbox"],
 .radio-label:active input[type="radio"] {
-    transform: scale(0.85);
+    transform: scale(0.88);
 }
 
-.checkbox-label:hover input[type="checkbox"],
-.radio-label:hover input[type="radio"] {
-    filter: brightness(1.2);
+.checkbox-label input:focus-visible,
+.radio-label input:focus-visible {
+    box-shadow: 0 0 0 3px rgba(102, 192, 244, 0.25);
 }
 
 .radio-label:has(input:disabled) {
@@ -272,16 +458,26 @@ select {
     cursor: not-allowed;
 }
 
+.radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    margin-bottom: 14px;
+}
+
+/* ---------- Tooltip ---------- */
+
 .tooltip-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 13px;
-    height: 13px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    background: var(--color-border);
-    color: var(--color-bg);
-    font-size: 9px;
+    background: var(--blue-soft);
+    border: 1px solid var(--line-strong);
+    color: var(--blue);
+    font-size: 10px;
     font-weight: 700;
     cursor: default;
     flex-shrink: 0;
@@ -293,16 +489,18 @@ select {
     /* Opens upward: hanging below the last row, the hidden box made Chrome size the
        popup to fit it, leaving an empty strip at the bottom whenever it showed (USD). */
     position: absolute;
-    bottom: calc(100% + 6px);
+    bottom: calc(100% + 8px);
     left: 0;
     right: 0;
-    padding: 6px 8px;
-    background: var(--color-toggle-bg);
-    border: 1px solid var(--color-border);
-    border-radius: 3px;
-    color: var(--color-text);
-    font-size: 11px;
+    padding: 8px 10px;
+    background: #101a26;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.5);
+    color: var(--text);
+    font-size: 12px;
     font-weight: 400;
+    line-height: 1.4;
     text-transform: none;
     letter-spacing: normal;
     white-space: normal;
@@ -316,139 +514,223 @@ select {
     opacity: 1;
 }
 
-.back-btn {
-    width: auto;
-    padding: 0;
-    background: none;
-    border: none;
-    color: var(--color-accent);
-    font-size: 10px;
-    line-height: 1;
+/* ---------- Buttons ---------- */
+
+button {
+    font-family: inherit;
     cursor: pointer;
-    flex-shrink: 0;
-    transition: color 0.12s ease-out, transform 0.06s ease-out;
 }
 
-.back-btn:hover {
-    background: none;
-    color: var(--color-white);
-}
-
-.back-btn:active {
-    transform: scale(0.9);
-}
-
+/* "More settings": a row, not faint text */
 .link-btn {
-    width: auto;
-    padding: 0;
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding: 11px 12px;
+    background: var(--blue-soft);
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    color: #d8ecfa;
+    font-size: 13px;
     font-weight: 600;
-    text-transform: uppercase;
-    cursor: pointer;
-    display: block;
-    margin: 8px auto 0;
-    transition: color 0.12s ease-out, transform 0.06s ease-out;
+    transition: background 0.12s ease-out, border-color 0.12s ease-out, transform 0.06s ease-out;
+}
+
+.link-btn svg {
+    color: var(--blue);
+    transition: transform 0.15s ease-out;
 }
 
 .link-btn:hover {
-    background: none;
-    color: var(--color-text);
+    background: rgba(102, 192, 244, 0.22);
+    border-color: var(--line-strong);
+}
+
+.link-btn:hover svg {
+    transform: translateX(2px);
 }
 
 .link-btn:active {
     transform: scale(0.98);
 }
 
-.section-heading {
-    font-size: 12px;
+.link-btn:focus-visible,
+.back-btn:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+}
+
+.back-btn {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    flex-shrink: 0;
+    padding: 0;
+    background: var(--blue-soft);
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    color: var(--blue);
+    transition: background 0.12s ease-out, color 0.12s ease-out, transform 0.06s ease-out;
+}
+
+.back-btn:hover {
+    background: rgba(102, 192, 244, 0.24);
+    color: #ffffff;
+}
+
+.back-btn:active {
+    transform: scale(0.9);
+}
+
+/* ---------- Rate line ---------- */
+
+.rate-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 11.5px;
+    color: var(--muted);
+}
+
+.rate-dot {
+    flex: none;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 6px rgba(143, 209, 106, 0.6);
+}
+
+.rate-text b {
+    color: var(--text);
+    font-weight: 600;
+}
+
+/* ---------- More settings ---------- */
+
+/* Two-option switch: the chosen side lights up in blue. */
+.segmented {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 12px;
+    padding: 4px;
+    background: var(--field);
+    border: 1px solid var(--line);
+    border-radius: 9px;
+}
+
+.segmented label {
+    flex: 1;
+    margin: 0;
+    cursor: pointer;
+}
+
+.segmented input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.segmented span {
+    display: block;
+    padding: 7px 0;
+    border-radius: 6px;
+    text-align: center;
+    font-size: 12.5px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
+    color: var(--muted);
+    transition: color 0.12s ease-out, background 0.12s ease-out;
+}
+
+.segmented label:hover span {
+    color: var(--text-strong);
+}
+
+.segmented input:checked + span {
+    background: linear-gradient(180deg, rgba(102, 192, 244, 0.32), rgba(102, 192, 244, 0.18));
+    box-shadow: inset 0 0 0 1px rgba(102, 192, 244, 0.5);
+    color: #ffffff;
+}
+
+.segmented input:focus-visible + span {
+    outline: 2px solid var(--blue);
+    outline-offset: -2px;
+}
+
+/* Live example of the chosen format */
+.preview {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding: 9px 12px;
+    background: var(--green-soft);
+    border: 1px solid var(--green-line);
+    border-left: 3px solid var(--green);
+    border-radius: var(--radius);
+}
+
+.preview-label {
+    font-size: 10.5px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text);
-    margin-bottom: 10px;
+    letter-spacing: 0.09em;
+    color: var(--muted);
 }
 
-.settings-divider {
-    border: none;
-    border-top: 1px solid var(--color-border);
-    opacity: 0.3;
-    margin: 12px 0;
-}
-
-.radio-row {
+/* Long formats ("€ 1 234,56" with a custom symbol) wrap rather than overflow */
+.preview-values {
     display: flex;
     flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 10px;
+    justify-content: flex-end;
+    gap: 2px 12px;
+    min-width: 0;
 }
 
-button {
-    width: 100%;
-    padding: 8px;
-    font-size: 12px;
-    font-weight: 600;
-    background: linear-gradient(to bottom, var(--color-btn-top), var(--color-btn-bottom));
-    border: none;
-    border-radius: 3px;
-    color: var(--color-white);
-    cursor: pointer;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    transition: filter 0.12s ease-out, transform 0.06s ease-out;
+.preview-value {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--green);
+    white-space: nowrap;
 }
 
-button:hover {
-    filter: brightness(1.15);
+.preview.original .preview-value {
+    color: var(--text-strong);
 }
 
-button:active {
-    transform: scale(0.97);
+.card {
+    padding: 13px 12px 4px;
+    margin-bottom: 12px;
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-radius: 10px;
 }
 
-.cc-combobox {
-    position: relative;
-    margin-bottom: 16px;
-}
-
-.cc-combobox input {
+.card:last-child {
     margin-bottom: 0;
 }
 
-#to-currency-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    max-height: 150px;
-    overflow-y: auto;
-    background: var(--color-input-bg);
-    border: 1px solid var(--color-border);
-    border-top: none;
-    border-radius: 0 0 3px 3px;
-    list-style: none;
-    z-index: 100;
+.card .checkbox-label {
+    margin-bottom: 12px;
 }
 
-#to-currency-dropdown li {
-    padding: 5px 10px;
-    font-size: 13px;
-    color: var(--color-white);
-    cursor: pointer;
+.section-heading {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--blue);
+    margin-bottom: 12px;
 }
 
-#to-currency-dropdown li:hover,
-#to-currency-dropdown li[aria-selected="true"] {
-    background: var(--color-toggle-checked);
-}
-
-/* A little breathing room under the last checkbox; the page otherwise ends right at
-   the body padding, which feels cramped after a long list. */
-#page-more {
-    padding-bottom: 8px;
-}
+/* ---------- Save indicator ---------- */
 
 .save-indicator {
     /* A small floppy disk in the bottom-right corner that flashes after each save.
@@ -459,12 +741,12 @@ button:active {
     pointer-events: none;
     z-index: 20;
     opacity: 0;
-    color: var(--color-saved);
+    color: var(--green);
 }
 
 .floppy {
     display: block;
-    filter: drop-shadow(0 0 3px rgba(133, 187, 101, 0.35));
+    filter: drop-shadow(0 0 4px rgba(133, 187, 101, 0.45));
 }
 
 .floppy-body {
@@ -476,11 +758,11 @@ button:active {
 }
 
 .save-indicator.error {
-    color: var(--color-error);
+    color: var(--error);
 }
 
 .save-indicator.error .floppy {
-    filter: drop-shadow(0 0 3px rgba(217, 83, 79, 0.35));
+    filter: drop-shadow(0 0 4px rgba(224, 98, 93, 0.45));
 }
 
 .save-indicator.error.visible {

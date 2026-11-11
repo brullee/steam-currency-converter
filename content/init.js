@@ -3,8 +3,6 @@ const SETTINGS_KEYS = [
     'formatting', ...LEGACY_FORMAT_KEYS,
 ];
 
-// ILS/ISL are disabled on purpose, as both store and target currency.
-const isBlockedCurrency = code => code === 'ILS' || code === 'ISL';
 
 // Bumped on every settings load. A slower, older load — e.g. a rate request still in
 // flight while the user keeps changing the popup — sees the mismatch and drops its result.
@@ -19,14 +17,14 @@ async function planConversion(stored) {
 
     const to = isBlockedCurrency(stored.targetCurrency) ? null : stored.targetCurrency;
     if (!to) {
-        console.log('[CurrencyConverter] No target currency set — configure it in the popup.');
+        console.log('[CurrencyConverter] No target currency set. Configure it in the popup.');
         return null;
     }
 
     const from = stored.fromCurrency && !isBlockedCurrency(stored.fromCurrency) && CURRENCIES[stored.fromCurrency]
         ? stored.fromCurrency : null;
     if (!from) {
-        console.log('[CurrencyConverter] No store currency set — configure it in the popup.');
+        console.log('[CurrencyConverter] No store currency set. Configure it in the popup.');
         return null;
     }
 
@@ -65,11 +63,13 @@ function commitPlan(plan) {
     CONFIG.to = plan.to;
     Object.assign(CONFIG, plan.config);
     FROM = CURRENCIES[plan.from];
+    FROM_CODE = plan.from;
+    codeRates.clear();
     TO   = buildToMeta(plan.to);
     FROM_META       = buildToMeta(plan.from);
     ORIGINAL_CONFIG = plan.original;
     stripUsdTrail = plan.strip;
-    ({ scan: PRICE_REGEX, match: PRICE_MATCH_REGEX } = buildRegexes(FROM, stripUsdTrail));
+    ({ scan: PRICE_REGEX, match: PRICE_MATCH_REGEX, matchAlt: PRICE_MATCH_ALT } = buildRegexes(FROM, stripUsdTrail));
     hoverOn       = plan.hover;
     strippingOnly = plan.strippingOnly;
     rate          = plan.rate;
@@ -80,11 +80,35 @@ function commitPlan(plan) {
     run();
 }
 
+// React pages rendered on the server (the beta market) compare their HTML with what
+// they render on hydration. Text we changed before that is a mismatch: React throws
+// away the whole page and renders it again from scratch (React error #418) — slow, and
+// every element is replaced. So on those pages the first write waits until the page
+// has loaded and gone idle, which is when hydration has finished. Capped, because
+// image-heavy pages can take long to fire `load`; if hydration is still running then,
+// React recovers on its own and the observer converts the new nodes.
+const HYDRATION_WAIT_CAP = 3000;
+let hydrated = null;
+function whenHydrated() {
+    if (hydrated) return hydrated;
+    const ssr = document.querySelector('[data-react-nav-root], script[src*="/ssr/"]');
+    hydrated = !ssr ? Promise.resolve() : new Promise(resolve => {
+        const idle = () => (window.requestIdleCallback
+            ? requestIdleCallback(() => resolve(), { timeout: 1000 })
+            : setTimeout(resolve, 200));
+        if (document.readyState === 'complete') idle();
+        else window.addEventListener('load', idle, { once: true });
+        setTimeout(resolve, HYDRATION_WAIT_CAP);
+    });
+    return hydrated;
+}
+
 async function applySettings() {
     const gen = ++settingsGeneration;
     const stored = await chrome.storage.sync.get(SETTINGS_KEYS);
     if (gen !== settingsGeneration) return;
-    const plan = await planConversion(stored);
+    // The rate request and the hydration wait run side by side.
+    const [plan] = await Promise.all([planConversion(stored), whenHydrated()]);
     if (gen !== settingsGeneration) return;
     commitPlan(plan);
 }

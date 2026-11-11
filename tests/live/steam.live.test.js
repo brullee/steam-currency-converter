@@ -54,3 +54,40 @@ test('app page: purchase prices converted', async () => {
     assert.deepEqual(prices.filter(p => /\$\d/.test(p)), [], `unconverted: ${JSON.stringify(prices)}`);
     await page.close();
 });
+
+// Steam selectors the extension uses (content/steam.js), checked on the public page where
+// each one belongs. None is needed to convert prices — but a selector matching nothing
+// means its extra (a hover group, the sale box) has quietly stopped working.
+const vm = require('vm');
+const fs = require('fs');
+const path = require('path');
+const STEAM = vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', '..', 'content', 'steam.js'), 'utf8') + ';STEAM');
+const PUBLIC_SELECTORS = [
+    ['https://store.steampowered.com/app/620/Portal_2/', '.game_purchase_action_bg, .game_purchase_action'],
+    ['https://store.steampowered.com/search/?specials=1', STEAM.notAHoverGroup],
+];
+
+test('Steam selectors in content/steam.js still match on their public pages', async () => {
+    for (const [, sel] of PUBLIC_SELECTORS) assert.ok(STEAM.hoverGroups.includes(sel) || Object.values(STEAM).includes(sel), `${sel} is not in steam.js`);
+    const stale = [];
+    for (const [url, sel] of PUBLIC_SELECTORS) {
+        const page = await open(url);
+        if (!(await page.$(sel))) stale.push(`${sel}  (${url})`);
+        await page.close();
+    }
+    assert.deepEqual(stale, [], 'Steam renamed these — check the live page, then update content/steam.js');
+});
+
+// The beta market is server-rendered React: text changed before hydration makes React
+// throw away the page and render it again (minified error #418/#423/#425).
+test('beta market: converting causes no React hydration errors', async () => {
+    const page = await b.browser.newPage();
+    const errors = [];
+    page.on('pageerror', e => { if (/Minified React error #(418|423|425)/.test(e.message)) errors.push(e.message.slice(0, 80)); });
+    await page.goto('https://steamcommunity.com/market/listings/730/AK-47%20%7C%20Redline%20%28Field-Tested%29', { waitUntil: 'networkidle2', timeout: 60000 });
+    await sleep(4000);
+    const rateLimited = await page.evaluate(() => /too many requests/i.test(document.body.innerText));
+    await page.close();
+    if (rateLimited) return console.log('market rate-limited this run; hydration not checked');
+    assert.deepEqual(errors, []);
+});

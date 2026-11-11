@@ -39,28 +39,89 @@ function buildRegexes(currency, stripTrailing = false) {
     // stops it from eating the start of a longer word (e.g. "USDT").
     // When off, " USD" stays in the text node so it remains visible after conversion.
     const trailingCode = stripTrailing ? `(?:\\s+USD(?![A-Za-z]))?` : '';
-    const core = currency.position === 'before'
-        ? `${sym}\\s*${signPart}${numPart}${trailingCode}`
-        : `${signPart}${numPart}\\s*${sym}${trailingCode}`;
+    const before = `${sym}\\s*${signPart}${numPart}${trailingCode}`;
+    const after  = `${signPart}${numPart}\\s*${sym}${trailingCode}`;
+    // The beta market formats prices by the account's locale, so the symbol can sit on
+    // the other side from the rest of Steam ("0.87$" next to "$23.06"). That other side
+    // is matched strictly: symbol against the number, and not followed by a digit or
+    // letter — otherwise "Save 5 $10.00" would read as "5 $", and "5 Players" as PHP "5 P".
+    const flipped = currency.position === 'before'
+        ? `${signPart}${numPart}${sym}(?![\\dA-Za-z])${trailingCode}`
+        : `(?<![\\d.,])${sym}${signPart}${numPart}${trailingCode}`;
+    const usual = currency.position === 'before' ? before : after;
     return {
-        scan:  new RegExp(core, 'g'),
-        match: new RegExp(`^(\\s*)${core}$`),
+        scan:      new RegExp(`${usual}|${flipped}`, 'g'),
+        match:     new RegExp(`^(\\s*)${usual}$`),
+        matchAlt:  new RegExp(`^(\\s*)${flipped}$`),
     };
+}
+
+// A whole-text FROM price in either symbol position: [full, leading space, sign, number].
+function matchPrice(text) {
+    return text.match(PRICE_MATCH_REGEX) || (PRICE_MATCH_ALT ? text.match(PRICE_MATCH_ALT) : null);
+}
+
+// "UAH 1,205.00": a price that names its currency. The beta market shows listings this
+// way, in a local display currency that isn't the wallet's (UAH for a USD wallet in
+// Ukraine). The code makes the currency unambiguous, so it converts with its own rate.
+// Only Steam's currencies count — "TOP 10" or "ALL 5" are not Tongan or Albanian money.
+const CODE_PRICE_REGEX = /(?<![A-Za-z])([A-Z]{3})[  ]?([-−+]?)(\d(?:[\d., ]|\s(?=[\d., ]))*\d|\d)(?![\d])/g;
+
+function hasCodePrice(text) {
+    CODE_PRICE_REGEX.lastIndex = 0;
+    let m;
+    while ((m = CODE_PRICE_REGEX.exec(text))) if (CURRENCIES[m[1]] && m[1] !== CONFIG.to) return true;
+    return false;
+}
+
+// Asks for one display currency's rate the first time it shows up; the page is
+// converted again once it arrives. No rate → those prices stay as Steam wrote them.
+function requestCodeRate(code) {
+    codeRates.set(code, null);
+    const gen = settingsGeneration;
+    requestRate(code, CONFIG.to).then(r => {
+        if (gen !== settingsGeneration || !r) return;
+        codeRates.set(code, r);
+        codeRatesVersion++;
+        run();
+    });
+}
+
+function convertCodePrices(text) {
+    if (strippingOnly) return text;
+    CODE_PRICE_REGEX.lastIndex = 0;
+    return text.replace(CODE_PRICE_REGEX, (m, code, sign, num) => {
+        if (!CURRENCIES[code] || code === CONFIG.to || isBlockedCurrency(code)) return m;
+        const r = code === FROM_CODE ? rate : codeRates.get(code);
+        if (r === undefined) { requestCodeRate(code); return m; }
+        const n = parsePrice(num);
+        if (!r || isNaN(n)) return m;
+        return `${sign}${toLabel(n * r)}`;
+    });
+}
+
+// Building an Intl.NumberFormat is expensive — it was over half of the extension's time
+// on a large page (perf/chrome.perf.test.js) — so there is one per locale and decimals.
+const numberFormats = new Map();
+function numberFormat(locale, places) {
+    const key = `${locale}|${places}`;
+    let f = numberFormats.get(key);
+    if (!f) {
+        const opts = { minimumFractionDigits: places, maximumFractionDigits: places };
+        try { f = new Intl.NumberFormat(locale, opts); } catch { f = new Intl.NumberFormat('en-US', opts); }
+        numberFormats.set(key, f);
+    }
+    return f;
 }
 
 // meta/config default to the converted price's; the original-price path passes FROM's.
 function formatAmount(value, showDecimals = true, meta = TO, config = CONFIG) {
     // Format via parts so separators are swapped by role, never by searching the
-    // string — a replaced group separator can't be mistaken for the decimal later.
+    // string, so a replaced group separator can't be mistaken for the decimal later.
     // Starting from the locale keeps currency-specific grouping (UAH space, VND period,
     // INR lakh groups, etc.) by default.
     const places = showDecimals ? 2 : 0;
-    let parts;
-    try {
-        parts = new Intl.NumberFormat(meta.numberFormat, { minimumFractionDigits: places, maximumFractionDigits: places }).formatToParts(value);
-    } catch {
-        parts = new Intl.NumberFormat('en-US', { minimumFractionDigits: places, maximumFractionDigits: places }).formatToParts(value);
-    }
+    const parts = numberFormat(meta.numberFormat, places).formatToParts(value);
 
     const localeDec  = parts.find(p => p.type === 'decimal')?.value;
     const localeThou = parts.find(p => p.type === 'group')?.value;
@@ -117,7 +178,7 @@ function parsePrice(numStr) {
 }
 
 function convertPriceText(text) {
-    const m = text.match(PRICE_MATCH_REGEX);
+    const m = matchPrice(text);
     if (!m) return text;
     const n = parsePrice(m[3]);
     if (isNaN(n)) return text;
@@ -131,7 +192,7 @@ function convertPriceText(text) {
 // One of Steam's own prices restyled with the "original" formatting set — the same
 // currency, so no rate, and decimals kept the way Steam showed them.
 function formatOriginalPrice(text) {
-    const m = text.match(PRICE_MATCH_REGEX);
+    const m = matchPrice(text);
     if (!m) return text;
     const n = parsePrice(m[3]);
     if (isNaN(n)) return text;

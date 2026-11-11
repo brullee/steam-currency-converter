@@ -5,8 +5,9 @@
   "scripts": {
     "test": "node --test --test-concurrency=1 --test-timeout=20000 --test-force-exit \"unit/**/*.test.js\"",
     "test:e2e": "node --test --test-concurrency=1 --test-timeout=60000 --test-force-exit \"e2e/**/*.test.js\"",
-    "test:all": "npm test && npm run test:e2e",
-    "test:live": "node --test --test-concurrency=1 --test-timeout=120000 --test-force-exit \"live/**/*.test.js\""
+    "test:live": "node --test --test-concurrency=1 --test-timeout=120000 --test-force-exit \"live/**/*.test.js\"",
+    "test:perf": "node --test --test-concurrency=1 --test-timeout=300000 --test-force-exit \"perf/**/*.perf.test.js\"",
+    "test:all": "npm test && npm run test:e2e && npm test:live && npm test:perf"
   },
   "devDependencies": {
     "jsdom": "24.1.3",

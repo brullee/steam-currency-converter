@@ -8,7 +8,16 @@ const CONFIG = {
     hideZeroDecimals: false,
 };
 
-let FROM, PRICE_REGEX, PRICE_MATCH_REGEX, TO;
+let FROM, FROM_CODE, PRICE_REGEX, PRICE_MATCH_REGEX, PRICE_MATCH_ALT, TO;
+
+// ILS/ISL are disabled on purpose: as store, target, and named display currency.
+const isBlockedCurrency = code => code === 'ILS' || code === 'ISL';
+
+// Rates for prices that name another currency ("UAH 1,205.00"): code → rate, or null
+// while the request is out / when none exists. Cleared with every settings commit.
+// The version goes into each node's rate key, so a newly arrived rate reconverts.
+const codeRates = new Map();
+let codeRatesVersion = 0;
 
 // Formatting for Steam's own prices (hover, wallet "(original)", conversion off),
 // and FROM's display metadata to rebuild them with. Set in commitPlan().

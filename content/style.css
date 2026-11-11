@@ -57,6 +57,72 @@
 }
 
 
+/* ---- Market beta dialogs ---- */
+
+/* Converted price, then Steam's own (charged) amount muted beside it */
+dialog[open] [data-cc-original] {
+    color: var(--color-converted) ;
+    font-weight: 600 ;
+    white-space: nowrap ;
+}
+
+dialog[open] [data-cc-original]::after {
+    content: attr(data-cc-original) ;
+    margin-left: 6px ;
+    color: #8f98a0 ;
+    font-weight: normal ;
+    font-size: 0.85em ;
+}
+
+/* Hovering already shows the original in place — don't show it twice */
+dialog[open] [data-cc-original][data-cc-hovering] {
+    color: inherit ;
+    font-weight: inherit ;
+}
+
+dialog[open] [data-cc-original][data-cc-hovering]::after {
+    content: none ;
+}
+
+/* Buy order: per-item conversion under the price input (spans the input + suffix columns) */
+.cc-chip {
+    grid-column: 2 / -1 ;
+    justify-self: start ;
+    display: inline-flex ;
+    align-items: baseline ;
+    gap: 8px ;
+    margin-top: -2px ;
+    padding: 6px 12px 6px 10px ;
+    border-radius: 4px ;
+    border: 1px solid rgba(133, 187, 101, 0.55) ;
+    border-left: 3px solid var(--color-converted) ;
+    background: rgba(133, 187, 101, 0.16) ;
+    font-family: "Motiva Sans", Arial, sans-serif ;
+    font-size: 15px ;
+    line-height: 1.25 ;
+    white-space: nowrap ;
+}
+
+.cc-chip-value {
+    color: #a4d67f ;
+    font-weight: 700 ;
+    letter-spacing: 0.01em ;
+}
+
+/* Price filter: the converted range under the slider */
+.cc-range-chip {
+    grid-column: auto ;
+    align-self: stretch ;
+    justify-content: center ;
+    margin-top: 10px ;
+    font-size: 14px ;
+}
+
+.cc-chip-muted {
+    color: #acb2b8 ;
+    font-size: 13px ;
+}
+
 /* Keep Steam's internal groups from wrapping, and anchor the preview label */
 .market_sell_dialog_input_group {
     white-space: nowrap ;
