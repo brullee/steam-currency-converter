@@ -82,31 +82,41 @@ You can run this extension directly inside the Steam desktop client using two co
 
 ### Hover to Compare
 
-Every converted price is interactive. Hover over one and it temporarily switches back to the original Steam price, so you can compare without toggling anything.
+Every converted price is interactive. Hover over it, or over the card, row or tab it belongs to, and every price in it switches back to Steam's original, so you can compare without toggling anything. It works the same everywhere: store rows, market listings, the beta market's tabs and cards, and dialogs.
 
-![Hover in action](docs/images/hover%20showcase.gif)
+![Hovering converted prices shows Steam's original](docs/images/hover-showcase.webp)
 
 If you'd rather not have this, you can turn it off with a checkbox in the popup. Prices stay converted, just without the hover.
 
-![Toggling hover off](docs/images/hover%20toggle.gif)
+![Turning hover off in the popup](docs/images/hover-toggle.webp)
 
 ### Community Market Support
 
-When you open a buy or sell dialog on the Community Market, the extension adds a live preview of the converted price: what you receive, what the buyer pays, and the order total. The previews update as you type, so you know the real amount in your currency before you confirm. The price history graph in the sell dialog is converted too.
+The Community Market, both the new beta and the classic version, is converted too: listings, wallet balance, and the buy and sell dialogs.
 
-![Sell dialog](docs/images/Sell.gif)
+On the **beta market**:
+- Listing cards, the item popup and the exterior tabs are converted, including prices Steam shows in a local display currency (e.g. `UAH 1,205.00` for a USD wallet), each with its own exchange rate.
+- The **Buy an item** dialog converts the subtotal, fees and total, with the amount Steam actually charges shown next to each one. Hover any of them to see Steam's price in place.
+- **Place buy order** shows the converted price per item under the price field, and it follows every change to the price or quantity as you type.
+- The **price filters** (listing page and Advanced Search) show the range you typed in your currency.
 
-![Buy dialog](docs/images/buy.gif)
+![Buy an item: converted charges, Steam's amount beside each, hover for the original](docs/images/market-buy.webp)
+
+![Place buy order: the converted price per item follows quantity and price](docs/images/market-buy-order.webp)
+
+On the **classic market**, the sell dialog shows live previews of what you receive and what the buyer pays, the buy order dialog shows the converted order total, and the price history graph tooltips are converted.
 
 ### Custom Number Formatting & Symbols
 
-Each currency comes with sensible local defaults, like German-style `2,64 €` or Vietnamese `312.000₫`. You can override any of it: set your own thousands and decimal separators, drop `.00` from round numbers, or replace the symbol with any text you like. You can also choose the symbol's position (left or right) and whether it has a space.
+Each currency comes with sensible local defaults, like German-style `2,64 €` or Brazilian `R$ 12,90`. You can override any of it: set your own thousands and decimal separators, drop `.00` from round numbers, or replace the symbol with any text you like. You can also choose the symbol's position (left or right) and whether it has a space.
 
 There are two separate sets of these settings, picked with the switch at the top of **More settings**: one for converted prices and one for Steam's own prices wherever they appear (on hover, in wallet balances, and when conversion is off). The switch names them after your currencies, e.g. **JOD prices | USD prices**. So you can, for example, show converted prices as `JD 12.50` while the hover shows `US$ 9.99`.
 
 If your Steam store shows prices with a trailing `USD` (e.g. `$9.99 USD`), the **Hide "USD" after prices** checkbox removes it. It's useful even when you're not converting, just to make prices tidier.
 
-![Formatting settings](docs/images/Settings.png)
+A live preview at the top of **More settings** shows example prices in the format you're editing, so you can see each change before opening Steam.
+
+![Changing the format updates the live preview](docs/images/format-preview.webp)
 
 
 ## Configuration
@@ -119,10 +129,14 @@ The popup has two layers of settings.
 - Hover to reveal the original price
 - Hide "USD" after prices (for stores that show `$9.99 USD`)
 
+Below them, the popup shows the exchange rate in use and when it was last updated (e.g. `1 USD = 0.86 EUR · updated 2h ago`).
+
 **Formatting (under "More settings"):** two separate sets, one for converted prices and one for Steam's own prices (on hover, in wallet balances, and when conversion is off). Each has:
 - Custom symbol text, position (left/right), and spacing
 - Thousands and decimal separators
 - Hiding `.00` on round numbers
+
+A live preview shows example prices in the set you're editing.
 
 
 ## Technical notes
@@ -145,9 +159,12 @@ npm install
 npm test            # unit tests: content scripts in jsdom
 npm run test:e2e    # end-to-end: the Chrome build in Google Chrome, on fixture pages served at Steam URLs
 npm run test:live   # the same build against the real Steam store and rate API (needs network)
+npm run test:perf   # timings per phase, whole-page cost in real Chrome, slowest functions
 ```
 
 The e2e and live suites use Google Chrome from its default install location. Set `BROWSER=helium` to use Helium, `BROWSER_PATH` to use any other Chromium-based browser, or `HEADED=1` to watch the tests run. The e2e suite uses fixed exchange rates, so it runs offline, like the unit tests.
+
+`test:perf` builds a large synthetic page and prints how long each phase takes (first pass, lazy-loaded content, settings changes, hover), how much main-thread time the extension adds in real Chrome, and which of its functions that time goes to. Each phase has a generous budget, so a big regression fails the run. Results are also saved to `tests/perf/results/` to compare runs.
 
 GitHub Actions runs the unit and e2e suites on every push and pull request, and the live suite once a week. That way, a change to Steam's pages or an outage of the rate API gets caught even when nobody is working on the code.
 

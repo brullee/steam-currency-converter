@@ -10,8 +10,10 @@ const call = (fn, ...args) => env.evaluate(`${fn}(${args.map(a => JSON.stringify
 function setup({ from = 'USD', to = 'EUR', config = {}, strip = false, stripping = false } = {}) {
     env.evaluate(`
         FROM = CURRENCIES[${JSON.stringify(from)}];
-        ({ scan: PRICE_REGEX, match: PRICE_MATCH_REGEX } = buildRegexes(FROM, ${strip}));
+        FROM_CODE = ${JSON.stringify(from)};
+        ({ scan: PRICE_REGEX, match: PRICE_MATCH_REGEX, matchAlt: PRICE_MATCH_ALT } = buildRegexes(FROM, ${strip}));
         TO = buildToMeta(${JSON.stringify(to)});
+        CONFIG.to = ${JSON.stringify(to)};
         Object.assign(CONFIG, { customSymbol: '', symbolPosition: '', symbolSpace: false,
             decimalSep: '', thousandsSep: '', hideZeroDecimals: false }, ${JSON.stringify(config)});
         strippingOnly = ${stripping};
@@ -113,4 +115,35 @@ test('ZAR price regex ignores "R18" age ratings', () => {
     env.evaluate('rate = 0.05');
     const conv = s => env.evaluate(`${JSON.stringify(s)}.replace(PRICE_REGEX, m => convertPriceText(m))`);
     assert.equal(conv('R18 rated. R 27.88'), 'R18 rated. $1.39');
+});
+
+test('store price with the symbol on the other side (beta market locale formatting)', () => {
+    setup({ from: 'USD', to: 'EUR' });
+    env.evaluate('rate = 0.5');
+    const conv = s => env.evaluate(`${JSON.stringify(s)}.replace(PRICE_REGEX, m => convertPriceText(m))`);
+    assert.equal(conv('0.87$'), '0,44€');
+    assert.equal(conv('145.57$ 396.42$'), '72,79€ 198,21€');
+    assert.equal(conv('$23.06'), '11,53€');
+    // The flipped form needs the symbol against the number, with no digit after it.
+    assert.equal(conv('Save 5 $10.00'), 'Save 5 5,00€');
+    setup({ from: 'EUR', to: 'USD' });
+    env.evaluate('rate = 2');
+    assert.equal(conv('€12,50'), '$25.00');
+    assert.equal(conv('12,50€'), '$25.00');
+    setup({ from: 'PHP', to: 'USD' });
+    env.evaluate('rate = 0.02');
+    assert.equal(conv('5 Players'), '5 Players');            // "P" is PHP's alt symbol
+    assert.equal(conv('P93.48'), '$1.87');
+});
+
+test('prices naming another Steam currency convert with that currency\'s rate', () => {
+    setup({ from: 'USD', to: 'EUR' });
+    env.evaluate(`rate = 0.5; codeRates.clear(); codeRates.set('UAH', 0.02);`);
+    const conv = s => env.evaluate(`convertCodePrices(${JSON.stringify(s)})`);
+    assert.equal(conv('UAH 1,205.00'), '24,10€');
+    assert.equal(conv('USD 4.00'), '2,00€');                 // the store currency, main rate
+    assert.equal(conv('EUR 4.00'), 'EUR 4.00');              // already the target
+    assert.equal(conv('TOP 10, ALL 5'), 'TOP 10, ALL 5');    // not Steam currencies
+    env.evaluate(`codeRates.set('KZT', null)`);              // no rate available
+    assert.equal(conv('KZT 5 000'), 'KZT 5 000');
 });

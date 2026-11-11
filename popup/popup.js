@@ -145,11 +145,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         thousandsSep:     thouSelect.value,
         hideZeroDecimals: document.getElementById('hide-zero-decimals').checked,
     });
+    // Preview: two example prices in the format being edited, drawn with the content
+    // scripts' own toLabel(), so it matches what Steam pages show. Display only.
+    const preview = document.getElementById('format-preview');
+    const renderPreview = () => {
+        const code = editingSet === 'converted'
+            ? toCurrencyInput.value.trim().toUpperCase()
+            : fromCurrencySelect.value;
+        if (!isKnownCurrency(code)) { preview.hidden = true; return; }
+        const meta = buildToMeta(code);
+        const set  = readFormatSet();
+        const [big, round] = preview.querySelectorAll('.preview-value');
+        big.textContent   = toLabel(1234.56, true, meta, set);
+        round.textContent = toLabel(12, true, meta, set);
+        preview.classList.toggle('original', editingSet === 'original');
+        preview.hidden = false;
+    };
+
     document.querySelectorAll('input[name="format-set"]').forEach(r => r.addEventListener('change', () => {
         editingSet = r.value;
         showFormatSet(editingSet);
+        renderPreview();
     }));
     showFormatSet(editingSet);
+    renderPreview();
+    const pageMore = document.getElementById('page-more');
+    pageMore.addEventListener('input', renderPreview);
+    pageMore.addEventListener('change', renderPreview);
+
+    // Rate line on the main page: the rate the background already cached for this pair
+    // ("1 USD = 0.86 EUR · updated 2h ago"). Display only; nothing is fetched here.
+    const rateStatus = document.getElementById('rate-status');
+    const ago = ms => {
+        const min = Math.round(ms / 60000);
+        if (min < 1) return 'just now';
+        if (min < 60) return `${min}m ago`;
+        const h = Math.round(min / 60);
+        return h < 24 ? `${h}h ago` : `${Math.round(h / 24)}d ago`;
+    };
+    const renderRate = async () => {
+        const from = fromCurrencySelect.value;
+        const to   = toCurrencyInput.value.trim().toUpperCase();
+        if (!conversionToggle.checked || !from || !isKnownCurrency(to) || from === to) { rateStatus.hidden = true; return; }
+        const keys  = [`v3_rate_${from}_${to}`, `v3_ts_${from}_${to}`];
+        const local = await chrome.storage.local.get(keys);
+        const rate  = local[keys[0]];
+        if (typeof rate !== 'number') { rateStatus.hidden = true; return; }
+        const shown = new Intl.NumberFormat('en-US', { maximumSignificantDigits: 4 }).format(rate);
+        const text  = rateStatus.querySelector('.rate-text');
+        text.textContent = '';
+        const strong = document.createElement('b');
+        strong.textContent = `1 ${from} = ${shown} ${to}`;
+        text.append(strong, local[keys[1]] ? ` · updated ${ago(Date.now() - local[keys[1]])}` : '');
+        rateStatus.hidden = false;
+    };
+    renderRate();
+    fromCurrencySelect.addEventListener('change', () => { renderRate(); renderPreview(); });
+    toCurrencyInput.addEventListener('input', () => { renderRate(); renderPreview(); });
+    conversionToggle.addEventListener('change', renderRate);
+    chrome.storage.onChanged.addListener((changes, area) => { if (area === 'local') renderRate(); });
 
     // Dim "to currency" group when conversion is off
     const toCurrencyGroup  = document.getElementById('to-currency-group');

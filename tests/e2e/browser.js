@@ -88,13 +88,19 @@ async function launch() {
 
     // Open `url` with the document (and any same-host frame) served from `pages`
     // ({ pathname: html }). Every other request is aborted, keeping runs offline.
-    async function openSteam(url, pages) {
+    // A request for /__hold fails only after `holdMs`, keeping `load` from firing
+    // until then (e.g. a slow image).
+    // `beforeGoto(page)` runs once the tab exists, before navigating (e.g. to start a trace).
+    async function openSteam(url, pages, { holdMs = 0, beforeGoto } = {}) {
         const page = await browser.newPage();
+        if (beforeGoto) await beforeGoto(page);
         await page.setRequestInterception(true);
         page.on('request', req => {
             const u = new URL(req.url());
             const html = pages[u.pathname];
-            if (html !== undefined && req.isNavigationRequest()) {
+            if (u.pathname === '/__hold') {
+                setTimeout(() => req.abort().catch(() => {}), holdMs);
+            } else if (html !== undefined && req.isNavigationRequest()) {
                 req.respond({ status: 200, contentType: 'text/html; charset=utf-8', body: `<!doctype html><html><head><meta charset="utf-8"></head><body>${html}</body></html>` });
             } else {
                 req.abort();

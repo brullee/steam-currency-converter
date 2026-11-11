@@ -69,6 +69,58 @@ test('store page: Steam updating a price is converted and hover shows the new or
     await page.close();
 });
 
+test('server-rendered React page: text untouched until the page has loaded (no hydration mismatch)', async () => {
+    await b.configure(USD_EUR, { USD_EUR: 0.5 });
+    // React hydrates between the document being parsed and `load`. The page script
+    // records when the price text first changes and when `load` fires: the extension's
+    // first write must come after `load`.
+    const page = await b.openSteam(`${MARKET}/market/listings/730/ssr`, {
+        '/market/listings/730/ssr': `
+            <div id="CommunityTemplate" data-react-nav-root="CommunityTemplate">
+                <span id="p" style="cursor:pointer">$10.00</span>
+            </div>
+            <script>
+                window.__t = {};
+                new MutationObserver(() => { window.__t.firstWrite ??= performance.now(); })
+                    .observe(document.getElementById('p'), { childList: true, characterData: true, subtree: true });
+                window.addEventListener('load', () => { window.__t.load = performance.now(); });
+            </script>
+            <img src="/__hold">`,
+    }, { holdMs: 800 });
+    await expectText(page, '#p', '5,00€');
+    const t = await page.evaluate(() => window.__t);
+    assert.ok(t.load !== undefined && t.firstWrite >= t.load, `first write at ${t.firstWrite}ms, load at ${t.load}ms`);
+    await page.close();
+});
+
+test('beta dialog: hovering a converted price swaps once and holds (no flicker)', async () => {
+    await b.configure(USD_EUR, { USD_EUR: 0.5 });
+    // Right-aligned charge breakdown, like the beta "Buy an item" dialog. The converted
+    // price plus its annotation is wider than Steam's original, so a swap that let the
+    // box shrink would pull it out from under a cursor near its left edge.
+    const page = await b.openSteam(`${MARKET}/market/listings/730/dlg`, {
+        '/market/listings/730/dlg': `
+            <dialog open style="width:400px"><form><div style="display:grid;grid-template-columns:1fr auto;justify-items:end;gap:8px">
+                <span>Total:</span><span id="total">$26.52</span>
+            </div></form></dialog>
+            <script>
+                window.__flips = 0;
+                new MutationObserver(() => window.__flips++)
+                    .observe(document.getElementById('total'), { characterData: true, childList: true, subtree: true });
+            </script>`,
+    });
+    await expectText(page, '#total', '13,26€');
+    const box = await (await page.$('#total')).boundingBox();
+    const flipsBefore = await page.evaluate(() => window.__flips);
+    await page.mouse.move(box.x + 3, box.y + box.height / 2);
+    await sleep(600);
+    assert.equal(await text(page, '#total'), '$26.52');
+    assert.ok(await page.evaluate(() => window.__flips) - flipsBefore <= 1, `text flipped ${await page.evaluate(() => window.__flips) - flipsBefore} times while the mouse stood still`);
+    await page.mouse.move(0, 0);
+    await expectText(page, '#total', '13,26€');
+    await page.close();
+});
+
 test('market graph tooltip: only the price line converts, redraws stay correct', async () => {
     await b.configure(USD_EUR, { USD_EUR: 0.5 });
     const page = await b.openSteam(`${MARKET}/market/listings/730/x`, {
@@ -236,6 +288,49 @@ test('popup: every change saves itself; USD-trail flag dropped for non-USD store
     await expectStorage(s => conv(s).thousandsSep === '.' && conv(s).decimalSep === ',');
     // "," is the decimal, so it can't also be picked as thousands separator.
     assert.equal(await page.$eval('#thou-sep option[value=","]', o => o.disabled), true);
+    await page.close();
+});
+
+test('popup: styled dropdowns choose, save and skip disabled options, by mouse and keyboard', async () => {
+    await b.configure({ fromCurrency: 'USD', targetCurrency: 'EUR' });
+    const page = await openPopup();
+    await page.waitForFunction(() => document.querySelector('#from-currency-button .cs-text').textContent.startsWith('USD'));
+    await page.click('#more-btn');
+    const conv = s => s.formatting?.converted ?? {};
+    const listShown = id => page.$eval(`#${id}-button + .cs-list`, l => !l.hidden);
+
+    // Mouse: open, pick "Comma (,)".
+    await page.click('#thou-sep-button');
+    assert.equal(await listShown('thou-sep'), true);
+    const [comma] = await page.$$('xpath/.//ul[contains(@class,"cs-list")]/li[normalize-space()="Comma (,)"]');
+    await comma.click();
+    await expectStorage(s => conv(s).thousandsSep === ',');
+    assert.equal(await listShown('thou-sep'), false);
+    assert.equal(await page.$eval('#thou-sep-button', el => el.textContent.trim()), 'Comma (,)');
+
+    // Keyboard: decimal separator. "Comma" is now taken by thousands, so it's skipped.
+    await page.focus('#dec-sep-button');
+    await page.keyboard.press('ArrowDown');                 // opens on "Unchanged"
+    await page.keyboard.press('ArrowDown');                 // Period
+    await page.keyboard.press('Enter');
+    await expectStorage(s => conv(s).decimalSep === '.');
+    await page.keyboard.press('ArrowDown');                 // opens on "Period"
+    await page.keyboard.press('ArrowDown');                 // skips disabled "Comma", wraps to "Unchanged"
+    await page.keyboard.press('Enter');
+    await expectStorage(s => conv(s).decimalSep === '');
+    assert.equal(await page.$eval('#dec-sep-button', el => el.textContent.trim()), 'Unchanged');
+
+    // Escape closes without changing anything; a click outside closes too.
+    await page.click('#thou-sep-button');
+    await page.keyboard.press('Escape');
+    assert.equal(await listShown('thou-sep'), false);
+    await page.click('#dec-sep-button');
+    await page.mouse.click(5, 5);
+    assert.equal(await listShown('dec-sep'), false);
+
+    // Values set from code (switching formatting sets) show on the buttons.
+    await page.click('.segmented label:nth-child(2)');
+    assert.equal(await page.$eval('#thou-sep-button', el => el.textContent.trim()), 'Unchanged');
     await page.close();
 });
 

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Steam Currency Converter",
-  "version": "1.2.0",
+  "version": "2.0.0",
   "description": "Convert Steam prices to your chosen currency in real time. Offers customizable symbols, number formatting, and community market.",
 
 "icons": {
@@ -35,7 +35,7 @@
         "*://steamcommunity.com/*",
         "*://checkout.steampowered.com/*"
       ],
-      "js": ["shared/currencies.js", "shared/settings.js", "shared/api.js", "content/state.js", "content/format.js", "content/hover.js", "content/market.js", "content/runner.js", "content/init.js"],
+      "js": ["shared/currencies.js", "shared/settings.js", "shared/api.js", "content/steam.js", "content/state.js", "content/format.js", "content/hover.js", "content/market.js", "content/runner.js", "content/init.js"],
       "css": ["content/style.css"],
       "run_at": "document_end",
       "all_frames": true

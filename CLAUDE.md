@@ -9,6 +9,7 @@ MV3 browser extension (Chrome + Firefox) that rewrites Steam prices into another
 
 ## Commands (in `tests/`)
 - `npm test` (jsdom), `npm run test:e2e` (real Chrome, offline fixtures), `npm run test:live` (real Steam).
+- `npm run test:perf`: per-phase timings (jsdom) and whole-page cost in real Chrome, with the extension's slowest functions. Run it after touching the walker, hover or formatting.
 - Before calling a change done, run the `verify` skill.
 - After editing extension files: reload it in `chrome://extensions`, then refresh Steam tabs.
 
@@ -20,6 +21,9 @@ MV3 browser extension (Chrome + Firefox) that rewrites Steam prices into another
 - Anything that writes to the page needs a matching undo in `resetPage()` / `restoreMarketElements()`.
 - Read formatting only via `readFormatting()` (`shared/settings.js`); show Steam's own price text via `formatOriginalText()`.
 - ILS/ISL stay disabled as source and target.
+- Steam class names and ids live only in `content/steam.js`. Nothing there may be required to convert a price; hover groups fall back to link / role / `cursor: pointer`.
+- One hover rule everywhere (`findHoverTarget`): hovering a price or the clickable thing it's in shows every original in it.
+- Server-rendered React pages (beta market): don't write before hydration (`whenHydrated()`), or React re-renders the page.
 - When a Steam selector stops matching, check the live page before editing a fixture.
 
 ## Release
