@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Steam Currency Converter",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Convert Steam prices to your chosen currency in real time. Offers customizable symbols, number formatting, and community market.",
 
 "icons": {
