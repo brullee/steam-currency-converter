@@ -4,6 +4,22 @@
 // doing all the real work (its value, its options, its change event, which popup.js
 // saves on) and is only hidden; a button shows the current choice and opens a list
 // drawn by the popup itself. Nothing here knows about settings.
+// Keeps an open list inside the popup: below its field when it fits, otherwise shifted up
+// over it. Lists are position: fixed, so they never make the popup grow or get cut off.
+function fitDropdown(anchor, list) {
+    const margin = 4;
+    const box = anchor.getBoundingClientRect();
+    list.style.top = '0px';
+    list.style.left = `${box.left}px`;
+    list.style.width = `${box.width}px`;
+    list.style.maxHeight = '';
+    const cap = parseFloat(getComputedStyle(list).maxHeight) || Infinity;
+    const height = Math.min(cap, list.offsetHeight, window.innerHeight - 2 * margin);
+    const top = Math.max(margin, Math.min(box.bottom + margin, window.innerHeight - margin - height));
+    list.style.top = `${top}px`;
+    list.style.maxHeight = `${height}px`;
+}
+
 (() => {
     const nativeValue = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value');
     let open = null;     // the dropdown whose list is showing
@@ -79,6 +95,7 @@
             if (open && open !== api) open.hide();
             render();
             list.hidden = false;
+            fitDropdown(wrap, list);
             button.setAttribute('aria-expanded', 'true');
             wrap.classList.add('cs-open');
             open = api;

@@ -36,6 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             toDropdown.appendChild(li);
         });
         toDropdown.hidden = false;
+        fitDropdown(toDropdown.parentElement, toDropdown);
     };
 
     // A typo like "EUE" would get no rate from the API, so reject it up front.

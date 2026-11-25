@@ -277,10 +277,7 @@ select option {
 }
 
 .cs-list {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
+    position: fixed;   /* placed by fitDropdown() */
     max-height: 196px;
     overflow-y: auto;
     padding: 4px;
@@ -334,10 +331,7 @@ select option {
 }
 
 #to-currency-dropdown {
-    position: absolute;
-    top: calc(100% + 4px);
-    left: 0;
-    right: 0;
+    position: fixed;   /* placed by fitDropdown() */
     max-height: 168px;
     overflow-y: auto;
     padding: 4px;
