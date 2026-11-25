@@ -9,8 +9,10 @@ const hoverTargetCache = new WeakMap();
 //   3. the enclosing role=link / role=button;
 //   4. the element a React page made clickable with `cursor: pointer` (the beta market
 //      has no links or roles on its cards and tabs, only click handlers);
-//   5. the new store's sale box, then the price's own element.
-// Steps 2–4 and the fallback need no Steam class names, so hover keeps working when
+//   5. the card an empty, absolutely positioned link is stretched over (beta market
+//      listing rows): that link sits on top of the price, so the price never gets mouseenter;
+//   6. the new store's sale box, then the price's own element.
+// Steps 2-5 and the fallback need no Steam class names, so hover keeps working when
 // Steam renames things. Cached per element: called once per price node per run().
 function findHoverTarget(el) {
     if (hoverTargetCache.has(el)) return hoverTargetCache.get(el);
@@ -18,6 +20,7 @@ function findHoverTarget(el) {
         || el.closest('a')
         || roleAncestor(el)
         || clickableAncestor(el)
+        || stretchedLinkCard(el)
         || el.closest(`:has(> ${STEAM.saleBox})`)
         || el;
     hoverTargetCache.set(el, result);
@@ -48,6 +51,20 @@ function clickableAncestor(el) {
         const parent = cur.parentElement;
         if (!parent || parent === document.body || getComputedStyle(parent).cursor !== 'pointer') return cur;
         cur = parent;
+    }
+    return null;
+}
+
+// A card made clickable by an empty <a> laid over it (position: absolute, no text) rather
+// than wrapping it. The link is a sibling of the price, so closest('a') misses it.
+function stretchedLinkCard(el) {
+    let cur = el.parentElement;
+    for (let depth = 0; cur && cur !== document.body && depth < CLICKABLE_DEPTH; depth++) {
+        for (const child of cur.children) {
+            if (child.tagName === 'A' && !child.textContent.trim()
+                && getComputedStyle(child).position === 'absolute') return cur;
+        }
+        cur = cur.parentElement;
     }
     return null;
 }

@@ -32,6 +32,25 @@ test('React card made clickable with cursor:pointer groups all its prices', asyn
     assert.equal(p.text('min'), '72,79€');
 });
 
+test('a card with an empty link stretched over it groups all its prices', async () => {
+    // Beta market listing row: the link covers the row, so a price under it never gets mouseenter.
+    const p = loadContent(`
+        <div id="list">
+            <div id="row">
+                <a href="#" style="position:absolute"></a>
+                <div><div><span id="ask">$2.00</span></div></div>
+                <div><span id="typical">$4.00</span></div>
+            </div>
+            <div><span id="other">$1.00</span></div>
+        </div>`, USD_EUR, { rate: 0.5 });
+    await sleep(SETTLE);
+    enter(p, 'row');
+    assert.deepEqual([p.text('ask'), p.text('typical')], ['$2.00', '$4.00']);
+    assert.equal(p.text('other'), '0,50€', 'a price outside the row must not swap');
+    leave(p, 'row');
+    assert.equal(p.text('typical'), '2,00€');
+});
+
 test('pointer on an ancestor the price opted out of doesn\'t group it', async () => {
     const p = loadContent(`
         <div id="page" style="cursor:pointer">
